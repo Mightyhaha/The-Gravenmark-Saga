@@ -36,12 +36,17 @@ file.CreateDir(GM.DataFolder .. "/Maps")
 file.CreateDir(GM.DataFolder .. "/backups")
 
 function GM:PlayerInitialSpawn(ply)
-	timer.Simple(3, function() -- TODO: needs to be networked or something
-		if not IsValid(ply) then return end
-
-		ply:LoadGame()
+	if not ply:IsBot() then return end
+	timer.Simple(3, function()
+		if IsValid(ply) then ply:LoadGame() end
 	end)
 end
+
+net.Receive("UD_FullyLoaded", function(len, ply)
+	if not IsValid(ply) or ply.UD_LoadRequested then return end
+	ply.UD_LoadRequested = true
+	ply:LoadGame()
+end)
 
 -- TODO: likely not needed, shouldn't be called with playerclass?
 -- honestly, most of the data should be moved to a playerclass

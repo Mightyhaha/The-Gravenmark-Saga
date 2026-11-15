@@ -10,8 +10,15 @@ function Entity:AddItem(strItem, intAmount)
 	self.Data.Inventory = self.Data.Inventory or {}
 	self.Data.Inventory[strItem] = self.Data.Inventory[strItem] or 0
 	self.Weight = self.Weight or 0
-	local intMaxItems = math.Clamp(math.floor((self:GetMaxWeight() - self.Weight) / tblItemTable.Weight), 0, intAmount)
-	intAmount = math.Clamp(intAmount, -self.Data.Inventory[strItem], intMaxItems)
+	local intMaxItems = math.huge
+	if tblItemTable.Weight > 0 then
+		intMaxItems = math.max(math.floor((self:GetMaxWeight() - self.Weight) / tblItemTable.Weight), 0)
+	end
+	if intAmount > 0 then
+		intAmount = math.min(intAmount, intMaxItems)
+	else
+		intAmount = math.max(intAmount, -self.Data.Inventory[strItem])
+	end
 	if intAmount == 0 then return false end
 	if SERVER then
 		if self.Data.Paperdoll and intAmount < 0 then

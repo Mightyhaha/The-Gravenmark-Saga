@@ -13,7 +13,7 @@ function Player:AddItemToBank(Item, Amount)
 	if self:HasBankRoomFor({[Item] = Amount}) then
 		self.Data.Bank = self.Data.Bank or {}
 		local NewTotal = (self.Data.Bank[Item] or 0) + Amount
-		self.Data.Bank[Item] = math.Clamp(NewTotal, 0, NewTotal)
+		self.Data.Bank[Item] = math.max(NewTotal, 0)
 		self.BankWeight = (self.BankWeight or 0) + (ItemTable.Weight * Amount)
 		if SERVER then
 			SendNetworkMessage("UD_UpdateBankItem", self, {Item, Amount})

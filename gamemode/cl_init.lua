@@ -67,6 +67,11 @@ local function forceDataTbl()
 end
 hook.Add("Tick", "UD_ForceDataTbl", forceDataTbl)
 
+hook.Add("InitPostEntity", "UD_FullyLoaded", function()
+	net.Start("UD_FullyLoaded")
+	net.SendToServer()
+end)
+
 local Player = FindMetaTable("Player")
 function Player:PlaySound(main, fallback)
 	if not IsValid(self) then return end

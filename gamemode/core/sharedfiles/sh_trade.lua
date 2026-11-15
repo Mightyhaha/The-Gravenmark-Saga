@@ -17,7 +17,7 @@ function Player:AddItemTrade(strItem, intAmount)
 	if self:HasItem(strItem, intAmount) then
 		self.Data.Trade = self.Data.Trade or {}
 		local intNewTotal = (self.Data.Trade[strItem] or 0) + intAmount
-		self.Data.Trade[strItem] = math.Clamp(intNewTotal, 0, intNewTotal)
+		self.Data.Trade[strItem] = math.max(intNewTotal, 0)
 		if SERVER then
 			SendNetworkMessage("UD_UpdateTradeItem", self, {strItem, intAmount})
 		end

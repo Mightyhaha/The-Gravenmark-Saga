@@ -11,7 +11,7 @@ end
 function toLevel(exp)
 	if not exp then return end
 	local level = math.sqrt(tonumber(exp) or 0)
-	return math.floor(math.Clamp(level / 6, 1, level))
+	return math.max(math.floor(level / 6), 1)
 end
 
 function Entity:GetLevel()

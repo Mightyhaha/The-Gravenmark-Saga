@@ -183,7 +183,7 @@ if SERVER then
 		local intPreExpLevel = self:GetLevel()
 		amount = tonumber(amount)
 		if intCurrentExp + amount >= 0 then
-			local intTotal = math.Clamp(intCurrentExp + amount, toExp(intPreExpLevel), intCurrentExp + amount)
+			local intTotal = math.max(intCurrentExp + amount, toExp(intPreExpLevel))
 			self:SetNWInt("exp", tonumber(intTotal))
 			if boolShowExp then
 				self:CreateIndicator("+_" .. amount .. "_Exp", self:GetPos() + Vector(0, 0, 70), "green")

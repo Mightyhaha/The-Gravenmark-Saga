@@ -33,14 +33,18 @@ GM.MapEditor.Models[22] = "models/props/cs_italy/it_mkt_table3.mdl"
 if not game.SinglePlayer() then return end
 
 function GM.MapEditor.OpenMapEditor()
-	local MapEditorFrame = CreateGenericFrame("Map Editor", true, true)
+	if GAMEMODE.MapEditor.Open and IsValid(GAMEMODE.MapEditor.Frame) then return end
+	local MapEditorFrame = CreateGenericFrame("Map Editor  (hold C to use the mouse)", true, true)
 	MapEditorFrame:SetPos(50, 50)
 	MapEditorFrame:SetSize(375, 450)
-	MapEditorFrame:MakePopup()
+	MapEditorFrame:SetMouseInputEnabled(false)
+	MapEditorFrame:SetKeyboardInputEnabled(false)
+	GAMEMODE.MapEditor.Frame = MapEditorFrame
 	MapEditorFrame.InternalClose = MapEditorFrame.Close
 	MapEditorFrame.Close = function()
 		MapEditorFrame:InternalClose()
 		GAMEMODE.MapEditor.Open = false
+		GAMEMODE.MapEditor.Frame = nil
 	end
 
 	local ControlsList = CreateGenericList(MapEditorFrame, 5, false, true)
@@ -114,6 +118,31 @@ function GM.MapEditor.OpenMapEditor()
 	GAMEMODE.MapEditor.Open = true
 end
 concommand.Add("UD_Dev_EditMap", function() GAMEMODE.MapEditor.OpenMapEditor() end)
+
+local function IsCursorKeyDown()
+	local KeyName = input.LookupBinding("+menu_context") or "c"
+	local KeyCode = input.GetKeyCode(KeyName)
+	return KeyCode and KeyCode > 0 and input.IsKeyDown(KeyCode)
+end
+
+local function IsTypingInFrame(Frame)
+	local Focus = vgui.GetKeyboardFocus()
+	return IsValid(Focus) and Focus ~= Frame and Focus:HasParent(Frame)
+end
+
+hook.Add("Think", "UD_MapEditorCursor", function()
+	local Frame = GAMEMODE.MapEditor.Frame
+	if not IsValid(Frame) then return end
+	local WantsCursor = IsCursorKeyDown() or IsTypingInFrame(Frame)
+	if WantsCursor == Frame.UD_HasCursor then return end
+	Frame.UD_HasCursor = WantsCursor
+	if WantsCursor then
+		Frame:MakePopup()
+	else
+		Frame:SetMouseInputEnabled(false)
+		Frame:SetKeyboardInputEnabled(false)
+	end
+end)
 
 function GM.MapEditor.UpatePanel()
 	if GAMEMODE.MapEditor.Open then

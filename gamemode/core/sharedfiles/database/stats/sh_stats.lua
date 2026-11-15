@@ -34,7 +34,7 @@ function Stat:OnSet(ply, Strength, OldStrength)
 end
 function Stat:DamageMod(ply, Strength, Damage)
 	if ply:IsMelee() then
-		Damage = Damage * math.Clamp(Strength / 3, 1, Strength)
+		Damage = Damage * math.max(Strength / 3, 1)
 	end
 	return Damage
 end
@@ -47,7 +47,7 @@ Stat.Desc = "The more you have, the more damage your ranged attacks will do."
 Stat.Default = 1
 function Stat:DamageMod(ply, Dexterity, Damage)
 	if not ply:IsMelee() then
-		Damage = Damage * math.Clamp(Dexterity / 3, 1, Dexterity)
+		Damage = Damage * math.max(Dexterity / 3, 1)
 	end
 	return Damage
 end
@@ -71,7 +71,7 @@ end
 function Stat:FireRateMod(ply, Agility, FireRate)
 	if not FireRate then return end
 	
-	FireRate = FireRate * math.Clamp(Agility / 5, 1, Agility)
+	FireRate = FireRate * math.max(Agility / 5, 1)
 	return FireRate
 end
 Register.Stat(Stat)

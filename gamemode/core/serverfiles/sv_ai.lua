@@ -138,7 +138,7 @@ local function NPCAdjustDamage(Victim, DamageInfo)
 			Attacker:AddQuestKill(Victim:GetNWString("npc"))
 		end
 		DamageInfo:SetDamage(math.Round(DamageInfo:GetDamage() + math.random(-1, math.Round(1 * (1 + (Attacker:GetStat("stat_luck") / 55))))))
-		DamageInfo:SetDamage(math.Clamp(DamageInfo:GetDamage(), 0, DamageInfo:GetDamage()))
+		DamageInfo:SetDamage(math.max(DamageInfo:GetDamage(), 0))
 		if not Attacker.EntityDamageData then
 			Attacker.EntityDamageData = {}
 		end

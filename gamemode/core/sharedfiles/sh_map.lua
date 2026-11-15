@@ -25,12 +25,13 @@ function GM:UpdateSpawnPoint(intKey, vecPosition, angAngle, strNPC, intLevel, in
 		tblToUpdateSpawn.Angle = angAngle or tblToUpdateSpawn.Angle or Angle(0, 0, 0)
 		tblToUpdateSpawn.NPC = strNPC or tblToUpdateSpawn.NPC or "zombie"
 		tblToUpdateSpawn.Level = intLevel or tblToUpdateSpawn.Level or 5
-		tblToUpdateSpawn.SpawnTime = intSpawnTime or tblToUpdateSpawn.SpawnTime or 0
+		tblToUpdateSpawn.SpawnTime = intSpawnTime or tblToUpdateSpawn.SpawnTime or 10
 		if IsValid(tblToUpdateSpawn.Monster) then
 			if SERVER and (tblToUpdateSpawn.NPC ~= OldNPC or tblToUpdateSpawn.Position ~= OldPosition) then
 				tblToUpdateSpawn.Monster:Remove()
 				tblToUpdateSpawn.Monster = nil
 				tblToUpdateSpawn.NextSpawn = nil
+				tblToUpdateSpawn.HasSpawned = nil
 			else
 				tblToUpdateSpawn.Monster:SetAngles(tblToUpdateSpawn.Angle)
 			end
@@ -125,6 +126,7 @@ if SERVER then
 		for _, SpawnPoint in pairs(tblSaveTable.NPCSpawnPoints or {}) do
 			SpawnPoint.Monster = nil
 			SpawnPoint.NextSpawn = nil
+			SpawnPoint.HasSpawned = nil
 		end
 		for _, WorldProp in pairs(tblSaveTable.WorldProps or {}) do
 			WorldProp.Entity = nil
@@ -139,10 +141,11 @@ if SERVER then
 		local NPCCount = #ents.FindByClass("npc_*")
 		for _, Spawn in pairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
 			if not IsValid(Spawn.Monster) and NPCCount < MaxNPCs then
-				if not Spawn.NextSpawn then Spawn.NextSpawn = CurTime() + Spawn.SpawnTime end
+				if not Spawn.NextSpawn then Spawn.NextSpawn = Spawn.HasSpawned and CurTime() + Spawn.SpawnTime or CurTime() end
 				if Spawn.SpawnTime > 0 and CurTime() >= Spawn.NextSpawn then
 					Spawn.Monster = GAMEMODE:CreateNPC(Spawn.NPC, Spawn)
 					Spawn.NextSpawn = nil
+					Spawn.HasSpawned = true
 					if IsValid(Spawn.Monster) then NPCCount = NPCCount + 1 end
 				end
 			end
