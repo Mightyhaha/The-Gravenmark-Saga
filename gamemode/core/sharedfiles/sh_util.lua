@@ -91,16 +91,13 @@ function GM:NotifyAll(Text)
 end
 
 if SERVER then
-	--SendUsrMsg -> SendNetworkMessage
-	function SendNetworkMessage(Name, Target, Args) -- TODO: Replace with net ✓ 
+	function SendNetworkMessage(Name, Target, Args)
 		net.Start(Name)
 		for _, value in pairs(Args or {}) do
-			if (next(Args) == nil) then return end
-		
 			if type(value) == "string" then
 				net.WriteString(value)
 			elseif type(value) == "number" then
-				net.WriteInt(value, 16)
+				net.WriteDouble(value)
 			elseif type(value) == "boolean" then
 				net.WriteBool(value)
 			elseif IsEntity(value) then
@@ -151,34 +148,39 @@ if SERVER then
 		return WorldProp
 	end
 
+	local function RestoreStatusColor(ent)
+		if not ent.UD_BeingSlowed and not ent.UD_BeingBurned and ent.UD_originalColor then
+			ent:SetColor(ent.UD_originalColor)
+			ent.UD_originalColor = nil
+		end
+	end
+
 	function Entity:Stun(Time, Severity)
 		if self.Resistance and self.Resistance == "Ice" then return end
 		if self.UD_BeingSlowed then return end
-		
+
 		Time = Time or 3
 		Severity = Severity or 0.1
 
 		local TotalTime = 0
 		local SlowRate = 0.1
+		local TimerName = "UD_Stun" .. self:EntIndex()
 		self.UD_originalColor = self.UD_originalColor or self:GetColor()
 
-		timer.Create("UD_Stun" .. self:EntIndex(), SlowRate, 0, function()
-			if not IsValid(self) then return end
-			
+		timer.Create(TimerName, SlowRate, 0, function()
+			if not IsValid(self) then timer.Remove(TimerName) return end
+
 			if TotalTime < Time then
 				self:SetPlaybackRate(Severity)
 				TotalTime = TotalTime + SlowRate
 			else
 				self:SetPlaybackRate(1)
 				self.UD_BeingSlowed = false
-				if self.UD_originalColor then
-					self:SetColor(self.UD_originalColor)
-					self.UD_originalColor = nil
-				end
-				timer.Remove("UD_Stun" .. self:EntIndex())
+				RestoreStatusColor(self)
+				timer.Remove(TimerName)
 			end
 		end)
-		
+
 		self:SetColor(Color(200, 200, 255, 255))
 		self.UD_BeingSlowed = true
 	end
@@ -192,36 +194,47 @@ if SERVER then
 
 		local TotalTime = 0
 		local IgnitedRate = 0.35
-		local startingHealth = self:Health()
-		
+		local TimerName = "UD_Burn" .. self:EntIndex()
+
 		self.UD_originalColor = self.UD_originalColor or self:GetColor()
-		
-		timer.Create("UD_Burn", IgnitedRate, 0, function()
+		self:Ignite(Time, 0)
+
+		timer.Create(TimerName, IgnitedRate, 0, function()
+			if not IsValid(self) then timer.Remove(TimerName) return end
+
 			if TotalTime < Time then
 				if IsValid(Player) then
 					Player:CreateIndicator(Damage, self:GetPos(), "red", true)
 				end
-				
+
+				self:SetHealth(math.max(self:Health() - Damage, 1))
 				self:SetNWInt("Health", self:Health())
-				self:Ignite(Time, 0) -- Used for the effect
-				self:SetHealth(startingHealth - Damage) -- Starts taking damage
 				TotalTime = TotalTime + IgnitedRate
 			else
 				self:Extinguish()
 				self.UD_BeingBurned = false
-				if self.UD_originalColor then
-					self:SetColor(self.UD_originalColor)
-					self.UD_originalColor = nil
-				end
-				timer.Remove("UD_Burn" .. self:EntIndex())
+				RestoreStatusColor(self)
+				timer.Remove(TimerName)
 			end
 		end)
 		self:SetColor(Color(200, 0, 0, 255))
 		self.UD_BeingBurned = true
 	end
 
+	function Entity:ClearStatusEffects()
+		timer.Remove("UD_Stun" .. self:EntIndex())
+		timer.Remove("UD_Burn" .. self:EntIndex())
+		if self.UD_BeingBurned then self:Extinguish() end
+		if self.UD_BeingSlowed then self:SetPlaybackRate(1) end
+		self.UD_BeingSlowed = false
+		self.UD_BeingBurned = false
+		RestoreStatusColor(self)
+	end
+
 	function GM:RemoveAll(strClass, Time)
-		table.foreach(ents.FindByClass(strClass .. "*"), function(_, ent) SafeRemoveEntityDelayed(ent, Time or 0) end)
+		for _, ent in ipairs(ents.FindByClass(strClass .. "*")) do
+			SafeRemoveEntityDelayed(ent, Time or 0)
+		end
 	end
 end
 

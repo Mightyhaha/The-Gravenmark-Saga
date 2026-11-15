@@ -34,7 +34,7 @@ function PANEL:Init()
 			local Item = ItemTable(Book)
 			local Panel = ReadSubMenu:AddOption(Item.PrintName, function() RunConsoleCommand("UD_ReadBook", Book) end)
 			ReadSubMenu.Panels[#ReadSubMenu.Panels] = Panel
-			ReadSubMenu.Panels[#ReadSubMenu.Panels]:SetToolTip(Item.Desc)
+			ReadSubMenu.Panels[#ReadSubMenu.Panels]:SetTooltip(Item.Desc)
 		end
 		local CraftSubMenu = GAMEMODE.ActiveMenu:AddSubMenu("Craft ...")
 		CraftSubMenu.Panels = {}	
@@ -59,7 +59,7 @@ function PANEL:Init()
 			for Master, Level in pairs(R.RequiredMasters) do
 				ToolTip = ToolTip .. "\n" .. Level .. " " .. MasterTable(Master).PrintName
 			end
-			CraftSubMenu.Panels[#CraftSubMenu.Panels]:SetToolTip(ToolTip)
+			CraftSubMenu.Panels[#CraftSubMenu.Panels]:SetTooltip(ToolTip)
 			if not LocalPlayer():CanMake(Recipe) then
 				CraftSubMenu.Panels[#CraftSubMenu.Panels]:SetDisabled(true)
 				CraftSubMenu.Panels[#CraftSubMenu.Panels]:SetAlpha(100)

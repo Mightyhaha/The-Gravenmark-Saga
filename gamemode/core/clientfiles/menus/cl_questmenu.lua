@@ -85,8 +85,8 @@ function PANEL:SellectQuest(Quest)
 		if PlayerQuestTable.Done or ItemsGot >= Amount then Text = Text .. " (Done)" end
 		self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, Text, White))
 	end
-	self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, "/n Rewards:", White))
-	if quest.GainedExp or 0 > 0 then
+	self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, "Rewards:", White))
+	if (quest.GainedExp or 0) > 0 then
 		self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, quest.GainedExp .. " Exp", White))
 	end
 	local ItemReward = nil
@@ -120,11 +120,10 @@ end
 vgui.Register("questmenu", PANEL, "Panel")
 
 concommand.Add("UD_OpenQuestMenu", function(ply, command, args)
-	local npc = ply:GetEyeTrace().Entity
-	local npctab = NPCTable(npc:GetNWInt("npc"))
-	if not IsValid(npc) or not npctab or not npctab.Quest then return end
+	local npctab = NPCTable(args[1])
+	if not npctab or not npctab.Quest then return end
 	GAMEMODE.QuestMenu = GAMEMODE.QuestMenu or vgui.Create("questmenu")
 	GAMEMODE.QuestMenu:SetSize(525, 320)
 	GAMEMODE.QuestMenu:Center()
-	GAMEMODE.QuestMenu:LoadQuests(NPCTable(args[1]).Quest)
+	GAMEMODE.QuestMenu:LoadQuests(npctab.Quest)
 end)

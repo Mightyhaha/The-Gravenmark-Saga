@@ -90,6 +90,6 @@ end
 
 if CLIENT then
 	net.Receive("UD_UpdateItem", function()
-		LocalPlayer():AddItem(net.ReadString(), net.ReadInt(16))
+		LocalPlayer():AddItem(net.ReadString(), net.ReadDouble())
 	end)
 end

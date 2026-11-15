@@ -47,6 +47,6 @@ end
 if CLIENT then
 	net.Receive("UD_UpdateStats", function()
 		if not LocalPlayer().SetStat then return end
-		LocalPlayer():SetStat(net.ReadString(), net.ReadInt(16))
+		LocalPlayer():SetStat(net.ReadString(), net.ReadDouble())
 	end)
 end

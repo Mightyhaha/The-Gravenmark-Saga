@@ -1,45 +1,54 @@
-local function TickDistanceRetreat()
-	for _, npc in pairs(ents.FindByClass("npc_*")) do
-		if IsValid(npc) and not npc.DontReturn  then
-			local NPCTable = NPCTable(npc:GetNWString("npc"))
-			if NPCTable and NPCTable.DistanceRetreat then
-				if npc:GetPos():Distance(npc.Position) > NPCTable.DistanceRetreat then
-					if not npc.HasTask then
-						npc:ReturnSpawn()
-						npc.HasTask = true
-						timer.Simple(20, function()
-							if IsValid(npc) and npc.HasTask then
-								npc:Idle()
-								npc.HasTask = false
-							end
-						end)
-					end
+local LeashInterval = 0.25
+local AggroRangeSqr = 200 ^ 2
+
+local function UpdateNPCLeash()
+	local Players = player.GetAll()
+	for _, npc in ipairs(ents.FindByClass("npc_*")) do
+		if not IsValid(npc) or npc.DontReturn or not npc.Position then continue end
+		local NPCTable = NPCTable(npc.Name or npc:GetNWString("npc"))
+		if not NPCTable or not NPCTable.DistanceRetreat then continue end
+
+		local Leash = NPCTable.DistanceRetreat
+		local DistSqr = npc:GetPos():DistToSqr(npc.Position)
+
+		if DistSqr > Leash ^ 2 and not npc.HasTask then
+			npc:ReturnSpawn()
+			npc.HasTask = true
+			timer.Simple(20, function()
+				if IsValid(npc) and npc.HasTask then
+					npc:Idle()
+					npc.HasTask = false
 				end
-				if npc:GetPos():Distance(npc.Position) > (NPCTable.DistanceRetreat * 2) then
-					npc:SetPos(npc.Position)
-				end
-				if npc.HasTask then
-					if npc:GetPos():Distance(npc.Position) < (NPCTable.DistanceRetreat * 0.1) then
-						npc:Idle()
-						npc.HasTask = false
-					end
-					if npc:IsBlocked() then
-						npc:SetPos(npc.Position)
-						npc.HasTask = false
-					end
-				end
-				if npc:IsNPC() and not npc:GetEnemy() then
-					for _,ply in pairs(player.GetAll()) do
-						if ply:GetPos():Distance(npc:GetPos()) < 200 then
-							npc:AttackEnemy(ply)
-						end
-					end
+			end)
+		end
+		if DistSqr > (Leash * 2) ^ 2 then
+			npc:SetPos(npc.Position)
+			DistSqr = 0
+		end
+		if npc.HasTask then
+			if DistSqr < (Leash * 0.1) ^ 2 then
+				npc:Idle()
+				npc.HasTask = false
+			end
+			if npc:IsBlocked() then
+				npc:SetPos(npc.Position)
+				npc.HasTask = false
+			end
+		end
+		if npc:IsNPC() and not npc:GetEnemy() then
+			local NPCPos = npc:GetPos()
+			local Nearest, NearestDistSqr = nil, AggroRangeSqr
+			for _, ply in ipairs(Players) do
+				local PlyDistSqr = ply:GetPos():DistToSqr(NPCPos)
+				if PlyDistSqr < NearestDistSqr then
+					Nearest, NearestDistSqr = ply, PlyDistSqr
 				end
 			end
+			if Nearest then npc:AttackEnemy(Nearest) end
 		end
 	end
 end
-hook.Add("Tick", "TickDistanceRetreat", TickDistanceRetreat)
+timer.Create("UD_NPCLeash", LeashInterval, 0, UpdateNPCLeash)
 
 function GM:OnNPCKilled(Target, Killer, weapon)
 	if Target:GetClass() == "npc_zombie" then GAMEMODE:RemoveAll("npc_headcrab") end
@@ -135,11 +144,15 @@ local function NPCAdjustDamage(Victim, DamageInfo)
 		end
 		Attacker.EntityDamageData[Victim] = (Attacker.EntityDamageData[Victim] or 0) + math.Clamp(DamageInfo:GetDamage(),0,Victim:Health())
 		Attacker:CreateIndicator(DamageInfo:GetDamage(), DamageInfo:GetDamagePosition(), DisplayColor, true)
-		if Victim:Health() <= DamageInfo:GetDamage() then
-			Victim:Remove()
-		end
 		Victim.FirstPlayerAttacker = Victim.FirstPlayerAttacker or Attacker
 		Victim.LastPlayerAttacker = Attacker
+		if Victim:Health() <= DamageInfo:GetDamage() then
+			if Victim:IsNPC() then
+				DamageInfo:SetDamage(Victim:Health() + DamageInfo:GetDamage())
+				return
+			end
+			Victim:Remove()
+		end
 		Victim:SetHealth(Victim:Health() - DamageInfo:GetDamage())
 		Victim:SetNWInt("Health", Victim:Health())
 		DamageInfo:SetDamage(0)

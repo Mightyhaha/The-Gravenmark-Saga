@@ -54,8 +54,9 @@ function GM.PaperDollEditor.OpenPaperDollEditor()
 	PaperDollFrame:SetDraggable(true)
 	PaperDollFrame:ShowCloseButton(true)
 	PaperDollFrame:MakePopup()
-	PaperDollFrame.Close.DoClick = function()
-		PaperDollFrame:Close()
+	GAMEMODE.PaperDollEditor.IsOpen = true
+	PaperDollFrame.OnClose = function()
+		GAMEMODE.PaperDollEditor.IsOpen = false
 		GAMEMODE.PaperDollEditor.CurrentCamRotation = nil
 		GAMEMODE.PaperDollEditor.CurrentCamDistance = nil
 	end
@@ -111,11 +112,11 @@ function GM.PaperDollEditor.AddVectorControls(AddList)
 		jdraw.DrawPanel(PaintPanel)
 	end
 	local NewXSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "X Axis", 30)
-	NewXSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedVector.x = value end
+	NewXSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedVector.x = value end
 	local NewYSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "Y Axis", 30)
-	NewYSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedVector.y = value end
+	NewYSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedVector.y = value end
 	local NewZSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "Z Axis", 30)
-	NewZSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedVector.z = value end
+	NewZSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedVector.z = value end
 	NewCollapseCat.UpdateNewValues = function(vecNewOffset)
 		NewXSlider.UpdateSlider(vecNewOffset.x)
 		NewYSlider.UpdateSlider(vecNewOffset.y)
@@ -141,11 +142,11 @@ function GM.PaperDollEditor.AddAngleControls(AddList)
 		jdraw.DrawPanel(PaintPanel)
 	end
 	local NewPitchSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "Pitch", 180)
-	NewPitchSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedAngle.p = value end
+	NewPitchSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedAngle.p = value end
 	local NewYawSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "Yaw", 180)
-	NewYawSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedAngle.y = value end
+	NewYawSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedAngle.y = value end
 	local NewRollSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "Roll", 180)
-	NewRollSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedAngle.r = value end
+	NewRollSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentAddedAngle.r = value end
 	NewCollapseCat.UpdateNewValues = function(angNewAngle)
 		NewPitchSlider.UpdateSlider(angNewAngle.p)
 		NewYawSlider.UpdateSlider(angNewAngle.y)
@@ -171,9 +172,9 @@ function GM.PaperDollEditor.AddCameraControls(AddList)
 		jdraw.DrawPanel(PaintPanel)
 	end
 	local NewRotationSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "Rotation", 180, 3)
-	NewRotationSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentCamRotation = value end
+	NewRotationSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentCamRotation = value end
 	local NewDistanceSlider = GAMEMODE.PaperDollEditor.CreateGenericSlider(NewCollapseCat.List, "Distance", 90)
-	NewDistanceSlider.ValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentCamDistance = value end
+	NewDistanceSlider.OnValueChanged = function(self, value) GAMEMODE.PaperDollEditor.CurrentCamDistance = value end
 	NewCollapseCat.List.Paint = function()
 		local PaintPanel = jdraw.NewPanel()
 		PaintPanel:SetDimensions(0, 0, NewCollapseCat.List:GetWide(), NewCollapseCat.List:GetTall())
@@ -205,8 +206,7 @@ function GM.PaperDollEditor.CreateGenericSlider(AddList, Name, Range, Decimals)
 	NewSlider:SetMax(Range)
 	NewSlider:SetDecimals(Decimals or 1)
 	NewSlider.UpdateSlider = function(NewValue)
-		NewSlider:SetValue(NewValue)
-		NewSlider.Slider:SetSlideX(NewSlider.Wang:GetFraction())
+		NewSlider:SetValue(tonumber(NewValue) or 0)
 	end
 	AddList:AddItem(NewSlider)
 	return NewSlider

@@ -109,45 +109,65 @@ if CLIENT then
 		end
 	end
 
-	local function DrawPaperDoll()
+	local function GetSlotTransform(plyPlayer, entTarget)
+		local strModel = plyPlayer:GetModel()
+		if entTarget.UD_LookupModel ~= strModel then
+			entTarget.UD_LookupModel = strModel
+			entTarget.UD_AttachmentID = plyPlayer:LookupAttachment(entTarget.Attachment)
+			entTarget.UD_BoneID = plyPlayer:LookupBone(entTarget.Attachment)
+		end
+		local tblAttachment = plyPlayer:GetAttachment(entTarget.UD_AttachmentID)
+		if tblAttachment then return tblAttachment.Pos, tblAttachment.Ang end
+		if entTarget.UD_BoneID then
+			return plyPlayer:GetBonePosition(entTarget.UD_BoneID)
+		end
+	end
+
+	local LastPositionedFrame = -1
+	local function PositionPaperDolls()
+		if FrameNumber() == LastPositionedFrame then return end
+		LastPositionedFrame = FrameNumber()
+
 		if LocalPlayer() and not LocalPlayer().Data then LocalPlayer().Data = {} end
 		if LocalPlayer() and LocalPlayer().Data and not LocalPlayer().Data.Paperdoll then LocalPlayer().Data.Paperdoll = {} end
 		for steamID64, tblPlayerTable in pairs(GAMEMODE.PaperDollEnts) do
 			local plyPlayer = player.GetBySteamID64(steamID64)
-			for strSlot, entTarget in pairs(tblPlayerTable or {}) do
-				if not plyPlayer or not plyPlayer:IsValid() then
-					for _, kid in pairs(entTarget.Children or {}) do SafeRemoveEntityDelayed(kid, 0) end
-					SafeRemoveEntityDelayed(entTarget, 0)
-					break
+			if not IsValid(plyPlayer) then
+				for _, entTarget in pairs(tblPlayerTable or {}) do
+					if IsValid(entTarget) then
+						for _, kid in pairs(entTarget.Children or {}) do SafeRemoveEntityDelayed(kid, 0) end
+						SafeRemoveEntityDelayed(entTarget, 0)
+					end
 				end
-				local tblItemTable = ItemTable(entTarget.Item)
-				if tblItemTable then
-					local tblAttachment = plyPlayer:GetAttachment(plyPlayer:LookupAttachment(entTarget.Attachment))
-					if not tblAttachment then
-						local bone = plyPlayer:LookupBone(entTarget.Attachment)
-						if bone then
-							local vecBonePosition, angBoneAngle = plyPlayer:GetBonePosition(bone)
-							tblAttachment = {Pos = vecBonePosition, Ang = angBoneAngle}
+				GAMEMODE.PaperDollEnts[steamID64] = nil
+			elseif not plyPlayer:IsDormant() then
+				for strSlot, entTarget in pairs(tblPlayerTable or {}) do
+					local tblItemTable = IsValid(entTarget) and ItemTable(entTarget.Item)
+					if tblItemTable then
+						local vecPos, angAng = GetSlotTransform(plyPlayer, entTarget)
+						if vecPos then
+							entTarget:SetAngles(angAng)
+							entTarget:SetAngles(entTarget:LocalToWorldAngles(tblItemTable.Model[1].Angle))
+							entTarget:SetPos(vecPos)
+							entTarget:SetPos(entTarget:LocalToWorld(tblItemTable.Model[1].Position))
 						end
-					end
-					if tblAttachment then
-						entTarget:SetAngles(tblAttachment.Ang)
-						entTarget:SetAngles(entTarget:LocalToWorldAngles(tblItemTable.Model[1].Angle))
-						entTarget:SetPos(tblAttachment.Pos)
-						entTarget:SetPos(entTarget:LocalToWorld(tblItemTable.Model[1].Position))
-					end
-					for k, kid in pairs(entTarget.Children or {}) do
-						kid:SetAngles(entTarget:GetAngles())
-						kid:SetAngles(kid:LocalToWorldAngles(tblItemTable.Model[k + 1].Angle))
-						kid:SetPos(entTarget:GetPos())
-						kid:SetPos(kid:LocalToWorld(tblItemTable.Model[k + 1].Position))
-						kid:SetParent(entTarget)
+						local EditorOpen = GAMEMODE.PaperDollEditor and GAMEMODE.PaperDollEditor.IsOpen
+						if EditorOpen or not entTarget.UD_ChildrenPlaced then
+							entTarget.UD_ChildrenPlaced = true
+							for k, kid in pairs(entTarget.Children or {}) do
+								kid:SetAngles(entTarget:GetAngles())
+								kid:SetAngles(kid:LocalToWorldAngles(tblItemTable.Model[k + 1].Angle))
+								kid:SetPos(entTarget:GetPos())
+								kid:SetPos(kid:LocalToWorld(tblItemTable.Model[k + 1].Position))
+								kid:SetParent(entTarget)
+							end
+						end
 					end
 				end
 			end
 		end
 	end
-	hook.Add("RenderScreenspaceEffects", "UD_DrawPaperDoll", DrawPaperDoll)
+	hook.Add("PreDrawOpaqueRenderables", "UD_DrawPaperDoll", PositionPaperDolls)
 end
 
 function GM:BuildModel(tblModelTable)

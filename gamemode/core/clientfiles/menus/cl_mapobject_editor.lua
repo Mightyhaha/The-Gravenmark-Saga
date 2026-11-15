@@ -125,6 +125,21 @@ function GM.MapEditor.UpatePanel()
 	end
 end
 
+local function CreateEditorButton(AddList, Text, OnClick)
+	local NewButton = vgui.Create("DButton")
+	NewButton:SetText(Text)
+	NewButton.DoClick = OnClick
+	NewButton.Paint = function(self, w, h)
+		local PaintPanel = jdraw.NewPanel()
+		PaintPanel:SetDimensions(0, 0, w, h)
+		PaintPanel:SetStyle(4, Gray)
+		PaintPanel:SetBorder(2, Tan)
+		jdraw.DrawPanel(PaintPanel)
+	end
+	AddList:AddItem(NewButton)
+	return NewButton
+end
+
 function GM.MapEditor.AddSpawnPointControls(AddList)
 	AddList:Clear()
 	local SpawnKey = GAMEMODE.MapEditor.CurrentObjectNum
@@ -132,54 +147,45 @@ function GM.MapEditor.AddSpawnPointControls(AddList)
 	local NPCName = SpawnTable.NPC or "zombie"
 	local Level = SpawnTable.Level or 5
 	local SpawnTime = SpawnTable.SpawnTime or 0
-	local Rotation = SpawnTable.Angle.y or 90
+	local Rotation = SpawnTable.Angle and SpawnTable.Angle.y or 90
 
 	local NPCTypes = vgui.Create("DComboBox")
-	local ID = 1
-	for key, npctable in pairs(GAMEMODE.DataBase.NPCs) do
-		NPCTypes:AddChoice(key)
-		if key == SpawnTable.NPC then NPCTypes:ChooseOptionID(ID) end
-		ID = ID + 1
+	local NPCNames = table.GetKeys(GAMEMODE.DataBase.NPCs)
+	table.sort(NPCNames)
+	for ID, Name in ipairs(NPCNames) do
+		NPCTypes:AddChoice(Name)
+		if Name == NPCName then NPCTypes:ChooseOptionID(ID) end
 	end
-	NPCTypes.OnSelect = function(index, value, data)
-		NPCName = data
-	end
+	NPCTypes.OnSelect = function(Panel, Index, Value) NPCName = Value end
 	AddList:AddItem(NPCTypes)
 
-	local Level = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Level", 50, 0)
-	Level:SetMin(0)
-	Level.ValueChanged = function(self, value) Level = value end
-	Level.UpdateSlider(Level)
+	local LevelSlider = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Level", 50, 0)
+	LevelSlider:SetMin(1)
+	LevelSlider.OnValueChanged = function(Panel, Value) Level = math.Round(Value) end
+	LevelSlider.UpdateSlider(Level)
 
-	local SpawnTime = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Spawn Time", 90, 0)
-	SpawnTime:SetMin(0)
-	SpawnTime.ValueChanged = function(self, value) SpawnTime = value end
-	SpawnTime.UpdateSlider(SpawnTime)
+	local SpawnTimeSlider = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Respawn seconds (0 = never spawns)", 600, 0)
+	SpawnTimeSlider:SetMin(0)
+	SpawnTimeSlider.OnValueChanged = function(Panel, Value) SpawnTime = math.Round(Value) end
+	SpawnTimeSlider.UpdateSlider(SpawnTime)
 
-	local Rotation = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Rotation", 180, 0)
-	Rotation.ValueChanged = function(self, value) Rotation = value end
-	Rotation.UpdateSlider(Rotation)
+	local RotationSlider = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Rotation", 180, 0)
+	RotationSlider.OnValueChanged = function(Panel, Value) Rotation = math.Round(Value) end
+	RotationSlider.UpdateSlider(Rotation)
 
-	local UpdateServer = vgui.Create("DButton")
-	UpdateServer:SetText("Update Server")
-	UpdateServer.DoClick = function()
+	CreateEditorButton(AddList, "Move spawn point to where I'm looking", function()
+		RunConsoleCommand("UD_Dev_EditMap_MoveSpawnPoint", SpawnKey)
+	end)
+	CreateEditorButton(AddList, "Update Server", function()
 		RunConsoleCommand("UD_Dev_EditMap_UpdateSpawnPoint", SpawnKey, NPCName, Level, SpawnTime, Rotation)
-	end
-	UpdateServer.Paint = function()
-		local PaintPanel = jdraw.NewPanel()
-		PaintPanel:SetDimensions(0, 0, UpdateServer:GetWide(), UpdateServer:GetTall())
-		PaintPanel:SetStyle(4, Gray)
-		PaintPanel:SetBorder(2, Tan)
-		jdraw.DrawPanel(PaintPanel)
-	end
-	AddList:AddItem(UpdateServer)
+	end)
 end
 
 function GM.MapEditor.AddWorldPropControls(AddList)
 	AddList:Clear()
 	local SpawnKey = GAMEMODE.MapEditor.CurrentObjectNum
 	local SpawnTable = GAMEMODE.MapEditor.CurrentObjectSet[SpawnKey]
-	local Model = SpawnTable.Entity:GetModel() or "models/props_junk/garbage_metalcan001a.mdl"
+	local Model = IsValid(SpawnTable.Entity) and SpawnTable.Entity:GetModel() or SpawnTable.Model or "models/props_junk/garbage_metalcan001a.mdl"
 	local vecOffset = Vector(0, 0, 0)
 	local Rotation = 0
 
@@ -187,27 +193,20 @@ function GM.MapEditor.AddWorldPropControls(AddList)
 	VectorControls.ValueChanged = function(vecValue) vecOffset = vecValue end
 	VectorControls.UpdateNewValues(vecOffset)
 
-	local Rotation = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Rotation", 180, 0)
-	Rotation.ValueChanged = function(self, value) Rotation = value end
-	Rotation.UpdateSlider(Rotation)
+	local RotationSlider = GAMEMODE.MapEditor.CreateGenericSlider(AddList, "Rotation", 180, 0)
+	RotationSlider.OnValueChanged = function(Panel, Value) Rotation = math.Round(Value) end
+	RotationSlider.UpdateSlider(Rotation)
 
 	local ModelControls = GAMEMODE.MapEditor.AddModelControls(AddList)
 	ModelControls:SetExpanded(false)
-	ModelControls.ValueChanged = function(NewModel) RunConsoleCommand("UD_Dev_EditMap_UpdateWorldProp", SpawnKey, NewModel, StringatizeVector(vecOffset), Rotation) end
+	ModelControls.ValueChanged = function(NewModel)
+		Model = NewModel
+		RunConsoleCommand("UD_Dev_EditMap_UpdateWorldProp", SpawnKey, NewModel, StringatizeVector(vecOffset), Rotation)
+	end
 
-	local UpdateServer = vgui.Create("DButton")
-	UpdateServer:SetText("Update Server")
-	UpdateServer.DoClick = function()
+	CreateEditorButton(AddList, "Update Server", function()
 		RunConsoleCommand("UD_Dev_EditMap_UpdateWorldProp", SpawnKey, Model, StringatizeVector(vecOffset), Rotation)
-	end
-	UpdateServer.Paint = function()
-		local PaintPanel = jdraw.NewPanel()
-		PaintPanel:SetDimensions(0, 0, UpdateServer:GetWide(), UpdateServer:GetTall())
-		PaintPanel:SetStyle(4, Gray)
-		PaintPanel:SetBorder(2, Tan)
-		jdraw.DrawPanel(PaintPanel)
-	end
-	AddList:AddItem(UpdateServer)
+	end)
 end
 
 function GM.MapEditor.CreateGenericCollapse(AddList, Name)
@@ -241,11 +240,11 @@ function GM.MapEditor.AddVectorControls(AddList)
 	local vecCommyVector = Vector(0, 0, 0)
 	local NewCollapseCat = GAMEMODE.MapEditor.CreateGenericCollapse(AddList, "Offset Controls")
 	local NewXSlider = GAMEMODE.MapEditor.CreateGenericSlider(NewCollapseCat.List, "X Axis", 30)
-	NewXSlider.ValueChanged = function(self, value) vecCommyVector.x = value NewCollapseCat.ValueChanged(vecCommyVector) end
+	NewXSlider.OnValueChanged = function(self, value) vecCommyVector.x = value NewCollapseCat.ValueChanged(vecCommyVector) end
 	local NewYSlider = GAMEMODE.MapEditor.CreateGenericSlider(NewCollapseCat.List, "Y Axis", 30)
-	NewYSlider.ValueChanged = function(self, value) vecCommyVector.y = value NewCollapseCat.ValueChanged(vecCommyVector) end
+	NewYSlider.OnValueChanged = function(self, value) vecCommyVector.y = value NewCollapseCat.ValueChanged(vecCommyVector) end
 	local NewZSlider = GAMEMODE.MapEditor.CreateGenericSlider(NewCollapseCat.List, "Z Axis", 30)
-	NewZSlider.ValueChanged = function(self, value) vecCommyVector.z = value NewCollapseCat.ValueChanged(vecCommyVector) end
+	NewZSlider.OnValueChanged = function(self, value) vecCommyVector.z = value NewCollapseCat.ValueChanged(vecCommyVector) end
 	NewCollapseCat.UpdateNewValues = function(vecNewOffset)
 		NewXSlider.UpdateSlider(vecNewOffset.x)
 		NewYSlider.UpdateSlider(vecNewOffset.y)
@@ -277,8 +276,7 @@ function GM.MapEditor.CreateGenericSlider(AddList, Name, Range, Decimals)
 	NewSlider:SetMax(Range)
 	NewSlider:SetDecimals(Decimals or 1)
 	NewSlider.UpdateSlider = function(NewValue)
-		NewSlider:SetValue(NewValue)
-		NewSlider.Slider:SetSlideX(NewSlider.Wang:GetFraction())
+		NewSlider:SetValue(tonumber(NewValue) or 0)
 	end
 	AddList:AddItem(NewSlider)
 	return NewSlider

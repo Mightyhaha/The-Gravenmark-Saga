@@ -32,6 +32,9 @@ for _,v in ipairs(NWStrings) do
 	util.AddNetworkString(v)
 end
 
+file.CreateDir(GM.DataFolder .. "/Maps")
+file.CreateDir(GM.DataFolder .. "/backups")
+
 function GM:PlayerInitialSpawn(ply)
 	timer.Simple(3, function() -- TODO: needs to be networked or something
 		if not IsValid(ply) then return end
@@ -47,8 +50,7 @@ function GM:PlayerSpawn(ply)
 	ply:SetModel(ply.Data and ply.Data.Model or "models/player/Group01/male_02.mdl")
 
 	-- Stops status effects continuing after respawn
-	timer.Remove("UD_Stun" .. ply:EntIndex())
-	timer.Remove("UD_Burn" .. ply:EntIndex())
+	ply:ClearStatusEffects()
 end
 
 function GM:PlayerLoadout(ply)

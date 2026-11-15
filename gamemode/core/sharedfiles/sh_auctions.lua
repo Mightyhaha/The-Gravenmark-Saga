@@ -65,15 +65,14 @@ if SERVER then
 	end
 
 	function GM:LoadAuctions()
-		local FileName = "underdone/Auctions.txt"
+		local FileName = GAMEMODE.DataFolder .. "/Auctions.txt"
 		if file.Exists(FileName, "DATA") then
-			GAMEMODE.Auctions = util.JSONToTable(file.Read(FileName))
+			GAMEMODE.Auctions = util.JSONToTable(file.Read(FileName, "DATA") or "") or {}
 		end
 	end
 
 	function GM:SaveAuctions()
-		local FileName = "underdone/Auctions.txt"
-		--PrintTable(GAMEMODE.Auctions)
+		local FileName = GAMEMODE.DataFolder .. "/Auctions.txt"
 		file.Write(FileName, util.TableToJSON(GAMEMODE.Auctions))
 	end
 
@@ -87,32 +86,46 @@ if SERVER then
 		GAMEMODE:LoadAuctions()
 		timer.Create("UD_AuctionsHourTimer", 900, 0, function() GAMEMODE:TimerUpdateAuctions() end)
 	end)
---SendNetworkMessage -> SendNetworkMessage
+	local function SendAuctions(ply, AuctionList)
+		local Data = util.Compress(util.TableToJSON(AuctionList))
+		net.Start("UD_UpdateAuctions")
+		net.WriteUInt(#Data, 32)
+		net.WriteData(Data, #Data)
+		net.Send(ply)
+	end
+
+	local function AuctionEntry(Key, Info)
+		if not Info then return {Key = Key, Removed = true} end
+		return {Key = Key, SellerID = Info.SellerID, Item = Info.Item, Amount = Info.Amount, Price = Info.Price, TimeLeft = Info.TimeLeft}
+	end
+
+	local RequestCooldown = 0.5
 	concommand.Add("UD_RequestAuctionInfo", function(ply, command, args)
 		if args[1] then
-			local AuctionTable = GAMEMODE.Auctions[tonumber(args[1])] or {}
-			SendNetworkMessage("UD_UpdateAuctions", ply, {tonumber(args[1]), AuctionTable.SellerID, AuctionTable.Item, AuctionTable.Amount, AuctionTable.Price, AuctionTable.TimeLeft})
-			SendNetworkMessage("UD_UpdateAuctions", ply, {0, "", "", 0, 0, 0, true})
-		else
-			if (ply.NextRequest or 0) > CurTime() then return end
-			local Counter = 0
-			for Key, Info in pairs(GAMEMODE.Auctions) do
-				if (Counter >= (ply:GetNWInt("AuctionPage") * GAMEMODE.AuctionsPerPage) and Counter < ((ply:GetNWInt("AuctionPage") + 1) * GAMEMODE.AuctionsPerPage)) or ply:SteamID() == Info.SellerID or game.SinglePlayer()  then
-					if Info.TimeLeft > CleanUpTime - DefaultAuctionTime or ply:SteamID() == Info.SellerID or game.SinglePlayer() then
-						timer.Simple(Counter / 200, function()
-							SendNetworkMessage("UD_UpdateAuctions", ply, {Key, Info.SellerID, Info.Item, Info.Amount, Info.Price, Info.TimeLeft})
-						end)
-					end
-				end
-				if Info.TimeLeft > CleanUpTime - DefaultAuctionTime then
-					Counter = Counter + 1
-				end
-			end
-			timer.Simple(Counter / 200, function()
-				SendNetworkMessage("UD_UpdateAuctions", ply, {0, "", "", 0, 0, 0, true})
-			end)
-			ply.NextRequest = CurTime() + 0
+			local Key = tonumber(args[1])
+			if Key then SendAuctions(ply, {AuctionEntry(Key, GAMEMODE.Auctions[Key])}) end
+			return
 		end
+
+		if (ply.NextRequest or 0) > CurTime() then return end
+		ply.NextRequest = CurTime() + RequestCooldown
+
+		local FirstIndex = ply:GetNWInt("AuctionPage") * GAMEMODE.AuctionsPerPage
+		local LastIndex = FirstIndex + GAMEMODE.AuctionsPerPage
+		local ActiveAfter = CleanUpTime - DefaultAuctionTime
+		local AuctionList = {}
+		local Counter = 0
+		for Key, Info in pairs(GAMEMODE.Auctions) do
+			local IsOwn = ply:SteamID() == Info.SellerID
+			local OnPage = Counter >= FirstIndex and Counter < LastIndex
+			if (OnPage or IsOwn or game.SinglePlayer()) and (Info.TimeLeft > ActiveAfter or IsOwn or game.SinglePlayer()) then
+				table.insert(AuctionList, AuctionEntry(Key, Info))
+			end
+			if Info.TimeLeft > ActiveAfter then
+				Counter = Counter + 1
+			end
+		end
+		SendAuctions(ply, AuctionList)
 	end)
 
 	concommand.Add("UD_CreateAuction", function(ply, command, args)
@@ -138,26 +151,24 @@ if SERVER then
 	end)
 
 	concommand.Add("UD_SetAuctionPage", function(ply, command, args)
-		ply:SetNWInt("AuctionPage", math.max(tonumber(args[1]), 0))
+		ply:SetNWInt("AuctionPage", math.max(tonumber(args[1]) or 0, 0))
 		ply:ConCommand("UD_RequestAuctionInfo")
 	end)
 end
 
 if CLIENT then
 	net.Receive("UD_UpdateAuctions", function()
-		local Key = net.ReadInt(16)
-		local SellerID = net.ReadString()
-		local Item = net.ReadString()
-		local Amount = net.ReadInt(16)
-		local Price = net.ReadInt(16)
-		local TimeLeft = net.ReadInt(16)
-		local Reload = net.ReadBool()
-		GAMEMODE.Auctions[Key] = {SellerID = SellerID, Item = Item, Amount = Amount, Price = Price, TimeLeft = TimeLeft}
-		if Item == "" then
-			GAMEMODE.Auctions[Key] = nil
+		local Length = net.ReadUInt(32)
+		local AuctionList = util.JSONToTable(util.Decompress(net.ReadData(Length)) or "") or {}
+		for _, Entry in ipairs(AuctionList) do
+			if Entry.Removed or not Entry.Item or Entry.Item == "" then
+				GAMEMODE.Auctions[Entry.Key] = nil
+			else
+				GAMEMODE.Auctions[Entry.Key] = {SellerID = Entry.SellerID, Item = Entry.Item, Amount = Entry.Amount, Price = Entry.Price, TimeLeft = Entry.TimeLeft}
+			end
 		end
 
-		if Reload and GAMEMODE.AuctionMenu then
+		if GAMEMODE.AuctionMenu then
 			GAMEMODE.AuctionMenu.BuyAuctions:LoadAuctions()
 			GAMEMODE.AuctionMenu.PickUpAuction:LoadAuctions()
 		end

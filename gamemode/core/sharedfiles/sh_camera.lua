@@ -19,7 +19,7 @@ function Player:GetIdealCamPos()
 		local tracedata = {}
 		tracedata.start = Position + Vector(0, 0, 25)
 		tracedata.endpos = Position + (self:EyeAngles():Forward() * -Distance) + Vector(0, 0, 25)
-		tracedata.filter = self.Owner
+		tracedata.filter = self
 		local trace = util.TraceLine(tracedata)
 		Distance = trace.HitPos:Distance(tracedata.start) - 10
 		Position = Position + (self:EyeAngles():Forward() * -Distance) + Vector(0, 0,  25)

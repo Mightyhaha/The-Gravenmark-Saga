@@ -73,74 +73,81 @@ function GM:HUDPaint()
 	end
 end
 
+local QuestDoneIcon = Material("gui/accept")
+
+local function AddWayPoint(ent)
+	if ent.HasWayPoint then return end
+	ent.HasWayPoint = true
+	local vPoint = ent:GetPos()
+	local WayPoint = EffectData()
+	WayPoint:SetStart(vPoint)
+	WayPoint:SetOrigin(vPoint)
+	WayPoint:SetEntity(ent)
+	WayPoint:SetScale(1)
+	util.Effect("selection_ring", WayPoint)
+end
+
+function GM:UpdateQuestWaypoints()
+	local ply = LocalPlayer()
+	if not IsValid(ply) or not ply.Data then return end
+	for Quest, Info in pairs(ply.Data.Quests or {}) do
+		local quest = QuestTable(Quest)
+		if not quest or ply:HasCompletedQuest(Quest) or ply:CanTurnInQuest(Quest) then continue end
+		for NPCName, Amount in pairs(Info.Kills or {}) do
+			if quest.Kill and Amount < (quest.Kill[NPCName] or 0) then
+				for _, ent in ipairs(UD_EntCache.NPCs) do
+					if IsValid(ent) and ent:GetNWString("npc") == NPCName then AddWayPoint(ent) end
+				end
+			end
+		end
+		for Item, AmountNeeded in pairs(quest.ObtainItems or {}) do
+			local item = ItemTable(Item)
+			if item and (ply:GetItem(Item) or 0) < AmountNeeded then
+				for _, prop in ipairs(UD_EntCache.Props) do
+					if IsValid(prop) and item.Model == prop:GetModel() then AddWayPoint(prop) end
+				end
+			end
+		end
+	end
+end
+
 function GM:DrawQuestToDoList()
 	local YOffset = 200
 	local Padding = 13
 	local QuestNumber = 0
-	local NameColour = White
 	if not LocalPlayer().Data then return end
 	for Quest, Info in pairs(LocalPlayer().Data.Quests or {}) do
-		if LocalPlayer():GetQuest(Quest) and not LocalPlayer():HasCompletedQuest(Quest) then
-			local quest = QuestTable(Quest)
+		local quest = QuestTable(Quest)
+		if quest and LocalPlayer():GetQuest(Quest) and not LocalPlayer():HasCompletedQuest(Quest) then
 			local XOffset = ScrW() - 200
-			if quest.Level then
-				if LocalPlayer():GetLevel() > quest.Level then
-					NameColour = Blue
-				end
+			local NameColour = White
+			if quest.Level and LocalPlayer():GetLevel() > quest.Level then
+				NameColour = Blue
 			end
 			if LocalPlayer():CanTurnInQuest(Quest) then
 				surface.SetDrawColor(255, 255, 255, 255)
-				surface.SetMaterial(Material("gui/accept"))
+				surface.SetMaterial(QuestDoneIcon)
 				surface.DrawTexturedRect(XOffset - 20, YOffset - 8, 16, 16)
 			end
 			draw.SimpleTextOutlined(quest.PrintName, "Trebuchet20", XOffset, YOffset, NameColour, 0, 1, 1, DrakGray)
 			YOffset = YOffset + Padding + 5
 			XOffset = XOffset + 20
 			for NPC, Amount in pairs(Info.Kills or {}) do
-				if !NPCTable(NPC) then return end
-				draw.SimpleTextOutlined(".", "Trebuchet20", XOffset - 8, YOffset - 5, white, 0, 1, 1, DrakGray)
-				if Amount < quest.Kill[NPC] then
-					draw.SimpleTextOutlined("Kill " .. NPCTable(NPC).PrintName .. " (" .. Amount .. "/" .. quest.Kill[NPC] .. ")", "Trebuchet18", XOffset, YOffset, White, 0, 1, 1, DrakGray)
-					YOffset = YOffset + Padding
-					for _, NPC in pairs(ents.FindByClass("npc_" .. NPC)) do
-						if not NPC.HasWayPoint and not LocalPlayer():CanTurnInQuest(Quest) then
-							NPC.HasWayPoint = true
-							local vPoint = NPC:GetPos()
-							WayPoint = EffectData()
-							WayPoint:SetStart( vPoint )
-							WayPoint:SetOrigin( vPoint )
-							WayPoint:SetEntity(NPC)
-							WayPoint:SetScale( 1 )
-							util.Effect( "selection_ring", WayPoint )
-						end
-					end
-				else
-					draw.SimpleTextOutlined("Kill " .. NPCTable(NPC).PrintName .. " (" .. quest.Kill[NPC] .. "/" .. quest.Kill[NPC] .. ")", "Trebuchet18", XOffset, YOffset, White, 0, 1, 1, DrakGray)
-					YOffset = YOffset + Padding
-				end
+				local KillTable = NPCTable(NPC)
+				local Needed = quest.Kill and quest.Kill[NPC]
+				if not KillTable or not Needed then continue end
+				draw.SimpleTextOutlined(".", "Trebuchet20", XOffset - 8, YOffset - 5, White, 0, 1, 1, DrakGray)
+				draw.SimpleTextOutlined("Kill " .. KillTable.PrintName .. " (" .. math.min(Amount, Needed) .. "/" .. Needed .. ")", "Trebuchet18", XOffset, YOffset, White, 0, 1, 1, DrakGray)
+				YOffset = YOffset + Padding
 			end
 			for Item, AmountNeeded in pairs(quest.ObtainItems or {}) do
 				local ItemsGot = LocalPlayer():GetItem(Item) or 0
 				local item = ItemTable(Item)
 				if not item then continue end
-				draw.SimpleTextOutlined(".", "Trebuchet20", XOffset - 8, YOffset - 5, white, 0, 1, 1, DrakGray)
+				draw.SimpleTextOutlined(".", "Trebuchet20", XOffset - 8, YOffset - 5, White, 0, 1, 1, DrakGray)
 				if ItemsGot < AmountNeeded then
 					draw.SimpleTextOutlined(item.PrintName .. " (" .. ItemsGot .. "/" .. AmountNeeded .. ")", "Trebuchet18", XOffset, YOffset, White, 0, 1, 1, DrakGray)
 					YOffset = YOffset + Padding
-					for _,prop in pairs(ents.FindByClass("prop_physics")) do
-						if IsValid(prop) and item.Model == prop:GetModel() then
-							if not prop.HasWayPoint and not LocalPlayer():CanTurnInQuest(Quest) then
-								prop.HasWayPoint = true
-								local vPoint = prop:GetPos()
-								WayPoint = EffectData()
-								WayPoint:SetStart( vPoint )
-								WayPoint:SetOrigin( vPoint )
-								WayPoint:SetEntity(prop)
-								WayPoint:SetScale( 1 )
-								util.Effect( "selection_ring", WayPoint )
-							end
-						end
-					end
 				else
 					draw.SimpleTextOutlined(item.PrintName .. " (" .. AmountNeeded .. "/" .. AmountNeeded .. ")", "Trebuchet18", XOffset, YOffset, White, 0, 1, 1, DrakGray)
 					YOffset = YOffset + Padding

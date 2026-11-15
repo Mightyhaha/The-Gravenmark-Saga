@@ -77,6 +77,6 @@ end
 
 if CLIENT then
 	net.Receive("UD_UpdateMasters", function()
-		LocalPlayer():SetMaster(net.ReadString(), net.ReadInt(16))
+		LocalPlayer():SetMaster(net.ReadString(), net.ReadDouble())
 	end)
 end

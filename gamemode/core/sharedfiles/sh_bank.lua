@@ -60,6 +60,6 @@ end
 
 if CLIENT then
 	net.Receive("UD_UpdateBankItem", function()
-		LocalPlayer():AddItemToBank(net.ReadString(), net.ReadInt(16))
+		LocalPlayer():AddItemToBank(net.ReadString(), net.ReadDouble())
 	end)
 end

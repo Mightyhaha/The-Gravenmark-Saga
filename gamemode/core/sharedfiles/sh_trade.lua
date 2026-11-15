@@ -31,6 +31,6 @@ end
 
 if CLIENT then
 	net.Receive("UD_UpdateTradeItem", function()
-		LocalPlayer():AddItemTrade(net.ReadString(), net.ReadInt(16))
+		LocalPlayer():AddItemTrade(net.ReadString(), net.ReadDouble())
 	end)
 end

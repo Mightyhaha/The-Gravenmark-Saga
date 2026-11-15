@@ -52,7 +52,7 @@ if CLIENT then
 		end)
 	end
 	net.Receive("UD_UpdateInvites", function()
-		LocalPlayer():UpdateInvites(net.ReadEntity(), net.ReadInt(16))
+		LocalPlayer():UpdateInvites(net.ReadEntity(), net.ReadDouble())
 	end)
 	net.Receive("UD_UpdateSquadTable", function()
 		LocalPlayer():UpdateSquadTable()

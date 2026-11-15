@@ -1,0 +1,16 @@
+"gravenmark"
+{
+	"base"        "base"
+	"title"       "The Gravenmark Saga"
+	"version"     "GIT"
+	"description" "An RPG gamemode set in the Trifecta rebellion, built on the Underdone RPG framework."
+
+	"author_name" "Polkm, Zeni, twentysix and Q2F2 (Underdone)"
+	"author_url"  "https://github.com/Etothepowerof26/underdone"
+
+	"maps"        "^ud_"
+
+	"hide"        "0"
+	"menusystem"  "1"
+	"selectable"  "1"
+}

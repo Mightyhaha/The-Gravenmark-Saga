@@ -20,14 +20,9 @@ function GM:TimerSpawnNPC(NPCAttack)
 	end
 end
 
-function GM:TickUpdater()
-	if (not GAMEMODE.NextUpdate) then GAMEMODE.NextUpdate = CurTime() end
-	if (CurTime() > GAMEMODE.NextUpdate) then
-		GAMEMODE.NextUpdate = CurTime() + 1
-		GAMEMODE:TimeChecker()
-	end
+if SERVER then
+	timer.Create("UD_EventTimeChecker", 1, 0, function() GAMEMODE:TimeChecker() end)
 end
-hook.Add("Tick", "TickUpdater", function() GAMEMODE:TickUpdater() end)
 
 function GM:TimeChecker()
 	for _, Event in pairs(GAMEMODE.DataBase.Events or {}) do

@@ -1,7 +1,9 @@
-GM.Name        = "Legacy Underdone"
-GM.Author      = "Polkm, Zeni, TwentySix and Q2F2"
+GM.Name        = "The Gravenmark Saga"
+GM.Author      = "Polkm, Zeni, TwentySix and Q2F2 (Underdone)"
 GM.Email       = "n/a"
 GM.Website     = "https://github.com/Zeni44/underdone"
+
+GM.DataFolder  = "underdone"
 
 GM.MonsterViewDistance = 200
 GM.RelationHate        = D_HT

@@ -7,7 +7,7 @@ local function DrawNPCIcon(NPC, NPCPos)
 end
 
 local function DrawNameText(NPC, NPCPos, Friendly)
-	local NpcTable = NPCTable(NPC:GetNWInt("npc"))
+	local NpcTable = NPCTable(NPC:GetNWString("npc"))
 	if not NpcTable then return end
 
 	local Level = NPC:GetNWInt("level")
@@ -41,13 +41,15 @@ local function DrawNameText(NPC, NPCPos, Friendly)
 	end
 end
 
+local NpcHealthBar = nil
+
 local function DrawNPCHealthBar(NPC, NPCPos)
 	local BarColor = Green
-	local Health = math.Clamp(NPC:Health(),0,9999)
+	local Health = math.Clamp(NPC:GetNWInt("Health", NPC:Health()), 0, 9999)
 	local MaxHealth = NPC:GetNWInt("MaxHealth")
 	if Health <= (MaxHealth * 0.2) then BarColor = Red end
 
-	local NpcHealthBar = jdraw.NewProgressBar()
+	NpcHealthBar = NpcHealthBar or jdraw.NewProgressBar()
 	NpcHealthBar:SetDimensions(NPCPos.x  - (80 / 2), NPCPos.y, 80, 11)
 	NpcHealthBar:SetStyle(4, BarColor)
 	NpcHealthBar:SetBorder(1, DrakGray)
@@ -56,17 +58,21 @@ local function DrawNPCHealthBar(NPC, NPCPos)
 	jdraw.DrawProgressBar(NpcHealthBar)
 end
 
+local InfoRangeSqr = 500 ^ 2
+
 local function DrawNPCInfo()
-	for _, ent in pairs(ents.GetAll()) do
-		if IsValid(ent) and (ent:IsNPC() or ent:IsBuilding()) and ent:GetNWInt("level") > 0 then
-			if ent:GetPos():Distance(LocalPlayer():GetPos()) < 500 then
-				local NpcTable = NPCTable(ent:GetNWInt("npc"))
-				if not NpcTable then return end
-				local Friendly = NpcTable.Race == "human"
-				local NPCPos = (ent:GetPos() + Vector(0, 0, 80)):ToScreen()
-				DrawNameText(ent, NPCPos, Friendly)
-				if not Friendly then DrawNPCHealthBar(ent, NPCPos) end
-			end
+	local ply = LocalPlayer()
+	if not IsValid(ply) then return end
+	local PlyPos = ply:GetPos()
+
+	for _, ent in ipairs(UD_EntCache.NPCs) do
+		if IsValid(ent) and ent:GetPos():DistToSqr(PlyPos) < InfoRangeSqr then
+			local NpcTable = NPCTable(ent:GetNWString("npc"))
+			if not NpcTable then continue end
+			local Friendly = NpcTable.Race == "human"
+			local NPCPos = (ent:GetPos() + Vector(0, 0, 80)):ToScreen()
+			DrawNameText(ent, NPCPos, Friendly)
+			if not Friendly then DrawNPCHealthBar(ent, NPCPos) end
 		end
 	end
 end

@@ -18,11 +18,11 @@ function ENT:Idle()
 		self:SetSchedule( SCHED_IDLE_STAND )
 	end
 	if IsValid(self:GetEnemy()) then
-		self:SetEnemy( NullEntity() )
-		self:SetTarget( NullEntity() )
+		self:SetEnemy( NULL )
+		self:SetTarget( NULL )
 	end
 	if self:IsFollowing() then
-		self.IsFollowing = false
+		self.UD_Following = false
 	end
 	self:StopMoving()
 	self:TaskComplete()
@@ -41,11 +41,11 @@ function ENT:Follow(Ent)
 	self:Idle()
 	self:SetLastPosition( Ent:GetPos() + Vector(math.random(10,30),math.random(10,30),0) )
 	self:SetSchedule( SCHED_FORCED_GO )
-	self.IsFollowing = true
+	self.UD_Following = true
 end
 
 function ENT:IsFollowing()
-	if self.IsFollowing then
+	if self.UD_Following then
 		return true
 	end
 	return false

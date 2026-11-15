@@ -1,44 +1,47 @@
-local SharedFolders = {}
-SharedFolders[1] = "underdone/gamemode/core/sharedfiles/"
-SharedFolders[2] = "underdone/gamemode/core/sharedfiles/database/"
-SharedFolders[3] = "underdone/gamemode/core/sharedfiles/database/items/"
-SharedFolders[4] = "underdone/gamemode/core/sharedfiles/database/npcs/"
-SharedFolders[5] = "underdone/gamemode/core/sharedfiles/database/quests/"
-SharedFolders[6] = "underdone/gamemode/core/sharedfiles/database/shops/"
-SharedFolders[7] = "underdone/gamemode/core/sharedfiles/database/skills/"
-SharedFolders[8] = "underdone/gamemode/core/sharedfiles/database/stats/"
-SharedFolders[9] = "underdone/gamemode/core/sharedfiles/database/recipes/"
-SharedFolders[10] = "underdone/gamemode/core/sharedfiles/database/masters/"
-SharedFolders[11] = "underdone/gamemode/core/sharedfiles/database/events/"
+local Root = GM.FolderName .. "/gamemode/core/"
 
-local ClientFolders = {}
-ClientFolders[1] = "underdone/gamemode/core/clientfiles/"
-ClientFolders[2] = "underdone/gamemode/core/clientfiles/menus/"
-ClientFolders[3] = "underdone/gamemode/core/clientfiles/vgui/"
-ClientFolders[4] = "underdone/gamemode/core/clientfiles/menutabs/"
-ClientFolders[5] = "underdone/gamemode/core/clientfiles/menutabs/helpmenu/"
-ClientFolders[6] = "underdone/gamemode/core/clientfiles/menutabs/auctionmenu/"
+local SharedFolders = {
+	"sharedfiles/",
+	"sharedfiles/database/",
+	"sharedfiles/database/items/",
+	"sharedfiles/database/npcs/",
+	"sharedfiles/database/npc_dialog/",
+	"sharedfiles/database/quests/",
+	"sharedfiles/database/shops/",
+	"sharedfiles/database/skills/",
+	"sharedfiles/database/stats/",
+	"sharedfiles/database/recipes/",
+	"sharedfiles/database/masters/",
+	"sharedfiles/database/events/",
+}
 
-local ServerFolders = {}
-ServerFolders[1] = "underdone/gamemode/core/serverfiles/"
-ServerFolders[2] = "underdone/gamemode/core/serverfiles/commands/"
+local ClientFolders = {
+	"clientfiles/",
+	"clientfiles/menus/",
+	"clientfiles/vgui/",
+	"clientfiles/menutabs/",
+	"clientfiles/menutabs/helpmenu/",
+	"clientfiles/menutabs/auctionmenu/",
+}
 
-if SERVER then
-	local TotalFolder = {}
-	table.Add(TotalFolder, SharedFolders)
-	table.Add(TotalFolder, ClientFolders)
-	table.Add(TotalFolder, ServerFolders)
+local ServerFolders = {
+	"serverfiles/",
+	"serverfiles/commands/",
+}
 
-	for _, path in pairs(TotalFolder) do
-		for _, file in pairs(file.Find(path .. "*.lua", "LUA")) do
-			if table.HasValue(ClientFolders, path) or table.HasValue(SharedFolders, path) then
-				AddCSLuaFile(path .. file)
-			end
-			if table.HasValue(SharedFolders, path) or table.HasValue(ServerFolders, path)  then
-				include(path .. file)
-			end
+local function ForEachLuaFile(Folders, Callback)
+	for _, Folder in ipairs(Folders) do
+		local Path = Root .. Folder
+		for _, FileName in ipairs(file.Find(Path .. "*.lua", "LUA")) do
+			Callback(Path .. FileName)
 		end
 	end
+end
+
+if SERVER then
+	ForEachLuaFile(SharedFolders, function(Path) AddCSLuaFile(Path) include(Path) end)
+	ForEachLuaFile(ClientFolders, AddCSLuaFile)
+	ForEachLuaFile(ServerFolders, include)
 
 	function resource.AddDir(dir, ext)
 		for _, f in ipairs(file.Find(dir .. "/*" .. (ext or ""), "GAME")) do
@@ -51,13 +54,6 @@ if SERVER then
 	resource.AddDir("materials/icons", ".vmt")
 	resource.AddDir("materials/icons", ".vtf")
 else
-	local TotalFolder = {}
-	table.Add(TotalFolder, SharedFolders)
-	table.Add(TotalFolder, ClientFolders)
-
-	for _, path in pairs(TotalFolder) do
-		for _, file in pairs(file.Find(path .. "*.lua", "LUA")) do
-			include(path .. file)
-		end
-	end
+	ForEachLuaFile(SharedFolders, include)
+	ForEachLuaFile(ClientFolders, include)
 end

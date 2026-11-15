@@ -89,6 +89,6 @@ if SERVER then
 end
 if CLIENT then
 	net.Receive("UD_UpdateSkills", function()
-		LocalPlayer():SetSkill(net.ReadString(), net.ReadInt(16))
+		LocalPlayer():SetSkill(net.ReadString(), net.ReadDouble())
 	end)
 end

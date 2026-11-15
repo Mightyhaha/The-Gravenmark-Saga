@@ -20,13 +20,20 @@ end
 function GM:UpdateSpawnPoint(intKey, vecPosition, angAngle, strNPC, intLevel, intSpawnTime)
 	local tblToUpdateSpawn = GAMEMODE.MapEntities.NPCSpawnPoints[intKey]
 	if tblToUpdateSpawn then
+		local OldNPC, OldPosition = tblToUpdateSpawn.NPC, tblToUpdateSpawn.Position
 		tblToUpdateSpawn.Position = vecPosition or tblToUpdateSpawn.Position
 		tblToUpdateSpawn.Angle = angAngle or tblToUpdateSpawn.Angle or Angle(0, 0, 0)
 		tblToUpdateSpawn.NPC = strNPC or tblToUpdateSpawn.NPC or "zombie"
 		tblToUpdateSpawn.Level = intLevel or tblToUpdateSpawn.Level or 5
 		tblToUpdateSpawn.SpawnTime = intSpawnTime or tblToUpdateSpawn.SpawnTime or 0
 		if IsValid(tblToUpdateSpawn.Monster) then
-			tblToUpdateSpawn.Monster:SetAngles(tblToUpdateSpawn.Angle)
+			if SERVER and (tblToUpdateSpawn.NPC ~= OldNPC or tblToUpdateSpawn.Position ~= OldPosition) then
+				tblToUpdateSpawn.Monster:Remove()
+				tblToUpdateSpawn.Monster = nil
+				tblToUpdateSpawn.NextSpawn = nil
+			else
+				tblToUpdateSpawn.Monster:SetAngles(tblToUpdateSpawn.Angle)
+			end
 		end
 		if SERVER and game.SinglePlayer() and IsValid(player.GetByID(1)) then
 			SendNetworkMessage("UD_UpdateSpawnPoint", player.GetByID(1), {intKey, tblToUpdateSpawn.Position, tblToUpdateSpawn.Angle, tblToUpdateSpawn.NPC, tblToUpdateSpawn.Level, tblToUpdateSpawn.SpawnTime})
@@ -97,9 +104,13 @@ end
 
 if SERVER then
 	function GM:LoadMapObjects()
-		local strFileName = "underdone/Maps/" .. game.GetMap() .. ".txt"
+		local strFileName = GAMEMODE.DataFolder .. "/Maps/" .. game.GetMap() .. ".txt"
 		if not file.Exists(strFileName, "DATA") then return end
-		local tblDecodedTable = util.JSONToTable(file.Read(strFileName))
+		local tblDecodedTable = util.JSONToTable(file.Read(strFileName, "DATA") or "")
+		if not tblDecodedTable then
+			ErrorNoHalt("[Gravenmark] Could not read map objects from data/" .. strFileName .. "\n")
+			return
+		end
 		for _, SpawnPoint in pairs(tblDecodedTable.NPCSpawnPoints or {}) do
 			GAMEMODE:CreateSpawnPoint(SpawnPoint.Position, SpawnPoint.Angle or Angle(0, 90, 0), SpawnPoint.NPC, SpawnPoint.Level, SpawnPoint.SpawnTime)
 		end
@@ -109,7 +120,7 @@ if SERVER then
 	end
 	hook.Add("Initialize", "LoadMapObjects", function() GAMEMODE:LoadMapObjects() end)
 	function GM:SaveMapObjects()
-		local strFileName = "underdone/Maps/" .. game.GetMap() .. ".txt"
+		local strFileName = GAMEMODE.DataFolder .. "/Maps/" .. game.GetMap() .. ".txt"
 		local tblSaveTable = table.Copy(GAMEMODE.MapEntities)
 		for _, SpawnPoint in pairs(tblSaveTable.NPCSpawnPoints or {}) do
 			SpawnPoint.Monster = nil
@@ -122,18 +133,22 @@ if SERVER then
 		file.Write(strFileName, util.TableToJSON(tblSaveTable))
 	end
 
+	local MaxNPCs = 500
 	function GM:SpawnMapEntities()
+		if GAMEMODE.EventHasStarted then return end
+		local NPCCount = #ents.FindByClass("npc_*")
 		for _, Spawn in pairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
-			if not Spawn.Monster or not Spawn.Monster:IsValid() and #ents.FindByClass("npc_*") < 500 and not GAMEMODE.EventHasStarted then
+			if not IsValid(Spawn.Monster) and NPCCount < MaxNPCs then
 				if not Spawn.NextSpawn then Spawn.NextSpawn = CurTime() + Spawn.SpawnTime end
 				if Spawn.SpawnTime > 0 and CurTime() >= Spawn.NextSpawn then
 					Spawn.Monster = GAMEMODE:CreateNPC(Spawn.NPC, Spawn)
 					Spawn.NextSpawn = nil
+					if IsValid(Spawn.Monster) then NPCCount = NPCCount + 1 end
 				end
 			end
 		end
 	end
-	hook.Add("Tick", "SpawnMapEntities", function() GAMEMODE:SpawnMapEntities() end)
+	timer.Create("UD_SpawnMapEntities", 1, 0, function() GAMEMODE:SpawnMapEntities() end)
 
 	function GM:CreateNPC(strNPC, tblSpawnPoint)
 		local tblNPCTable = NPCTable(strNPC)
@@ -245,7 +260,14 @@ if SERVER then
 		concommand.Add("UD_Dev_EditMap_UpdateSpawnPoint", function(ply, command, args)
 			if not ply:IsAdmin() or not ply:IsPlayer() then return end
 			if args[1] and GAMEMODE.MapEntities.NPCSpawnPoints[tonumber(args[1])] then
-				GAMEMODE:UpdateSpawnPoint(tonumber(args[1]), nil, Angle(0, tonumber(args[5]), 0), args[2], tonumber(args[3]), tonumber(args[4]))
+				GAMEMODE:UpdateSpawnPoint(tonumber(args[1]), nil, Angle(0, tonumber(args[5]) or 0, 0), args[2], tonumber(args[3]), tonumber(args[4]))
+			end
+		end)
+		concommand.Add("UD_Dev_EditMap_MoveSpawnPoint", function(ply, command, args)
+			if not ply:IsAdmin() or not ply:IsPlayer() then return end
+			local intKey = tonumber(args[1])
+			if intKey and GAMEMODE.MapEntities.NPCSpawnPoints[intKey] then
+				GAMEMODE:UpdateSpawnPoint(intKey, ply:GetEyeTraceNoCursor().HitPos + Vector(0, 0, 10))
 			end
 		end)
 
@@ -276,19 +298,19 @@ if SERVER then
 elseif CLIENT and game.SinglePlayer() then
 	
 	net.Receive("UD_UpdateSpawnPoint", function()
-		GAMEMODE:UpdateSpawnPoint(net.ReadInt(16), net.ReadVector(), net.ReadAngle(), net.ReadString(), net.ReadInt(16), net.ReadInt(16))
+		GAMEMODE:UpdateSpawnPoint(net.ReadDouble(), net.ReadVector(), net.ReadAngle(), net.ReadString(), net.ReadDouble(), net.ReadDouble())
 		GAMEMODE.MapEditor.UpatePanel()
 	end)
 	net.Receive("UD_RemoveSpawnPoint", function()
-		GAMEMODE:RemoveSpawnPoint(net.ReadInt(16))
+		GAMEMODE:RemoveSpawnPoint(net.ReadDouble())
 		GAMEMODE.MapEditor.UpatePanel()
 	end)
 	net.Receive("UD_UpdateWorldProp", function()
-		GAMEMODE:UpdateWorldProp(net.ReadInt(16), net.ReadString(), net.ReadVector(), net.ReadAngle(), net.ReadEntity())
+		GAMEMODE:UpdateWorldProp(net.ReadDouble(), net.ReadString(), net.ReadVector(), net.ReadAngle(), net.ReadEntity())
 		GAMEMODE.MapEditor.UpatePanel()
 	end)
 	net.Receive("UD_RemoveWorldProp", function()
-		GAMEMODE:RemoveWorldProp(net.ReadInt(16))
+		GAMEMODE:RemoveWorldProp(net.ReadDouble())
 		GAMEMODE.MapEditor.UpatePanel()
 	end)
 end

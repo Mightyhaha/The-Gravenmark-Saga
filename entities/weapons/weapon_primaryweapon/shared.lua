@@ -12,7 +12,7 @@ end
 function SWEP:OnRemove()
 	if SERVER then
 		if self.WeaponTable and self.WeaponTable.AmmoType ~= "none" then
-			self.Owner:GiveAmmo(self:Clip1(), self.WeaponTable.AmmoType)
+			self:GetOwner():GiveAmmo(self:Clip1(), self.WeaponTable.AmmoType)
 		end
 	end
 end
@@ -42,17 +42,17 @@ function SWEP:Reload()
 	if self:GetNWBool("reloading") == true then return false end
 	local strAmmoType = self.WeaponTable.AmmoType
 	local intClipSize = self.WeaponTable.ClipSize
-	local intCurrentAmmo = self.Owner:GetAmmoCount(strAmmoType)
+	local intCurrentAmmo = self:GetOwner():GetAmmoCount(strAmmoType)
 	if strAmmoType ~= "none" and self:Clip1() < self.WeaponTable.ClipSize and intCurrentAmmo > 0 then
 		self:SetNWBool("reloading", true)
 		self:SetNextPrimaryFire(CurTime() + self.WeaponTable.ReloadTime)
 		if (game.SinglePlayer() and SERVER) or (not game.SinglePlayer() and CLIENT) then
 			if self.WeaponTable.ReloadSound then self:EmitSound(self.WeaponTable.ReloadSound) end
 		end
-		self.Owner:DoReloadEvent()
+		self:GetOwner():DoReloadEvent()
 		timer.Simple(self.WeaponTable.ReloadTime, function()
-			if not self or not IsValid(self.Owner) or not self.Owner:Alive() then return end
-			self.Owner:RemoveAmmo(self.WeaponTable.ClipSize - self:Clip1(), self.WeaponTable.AmmoType)
+			if not IsValid(self) or not IsValid(self:GetOwner()) or not self:GetOwner():Alive() then return end
+			self:GetOwner():RemoveAmmo(self.WeaponTable.ClipSize - self:Clip1(), self.WeaponTable.AmmoType)
 			self:SetClip1(math.Clamp(self.WeaponTable.ClipSize, 0, self:Clip1() + intCurrentAmmo))
 			self:SetNWBool("reloading", false)
 		end)
@@ -68,7 +68,7 @@ function SWEP:PrimaryAttack()
 end
 
 function SWEP:SecondaryAttack()
-	local ply = self.Owner
+	local ply = self:GetOwner()
 	self:RightCallBack(ply)
 	local intFireRate = self:GetFireRate(self.WeaponTable.FireRate)
 	self:SetNextSecondaryFire(CurTime() + (1 / intFireRate))
@@ -79,18 +79,18 @@ function SWEP:WeaponAttack()
 	local isMelee = self.WeaponTable.Melee
 
 	if isMelee then
-		self.Owner:DoAnimationEvent(ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE)
+		self:GetOwner():DoAnimationEvent(ACT_HL2MP_GESTURE_RANGE_ATTACK_MELEE)
 	else
-		self.Owner:DoAttackEvent()
+		self:GetOwner():DoAttackEvent()
 	end
 
 	if self.WeaponTable then
-		local intRange = self.Owner:GetEyeTrace().HitPos:Distance(self.Owner:GetEyeTrace().StartPos)
+		local intRange = self:GetOwner():GetEyeTrace().HitPos:Distance(self:GetOwner():GetEyeTrace().StartPos)
 		local intMaxRange = 4000
 		if isMelee then intMaxRange = 70 end
 		local tblBullet = {}
-		tblBullet.Src     = self.Owner:GetShootPos()
-		tblBullet.Dir     = self.Owner:GetAimVector()
+		tblBullet.Src     = self:GetOwner():GetShootPos()
+		tblBullet.Dir     = self:GetOwner():GetAimVector()
 		tblBullet.Force    = (self.WeaponTable.Power or 3) / 2
 		tblBullet.Spread   = Vector(self.WeaponTable.Accuracy, self.WeaponTable.Accuracy, 0)
 		tblBullet.Num     = self.WeaponTable.NumOfBullets
@@ -101,11 +101,11 @@ function SWEP:WeaponAttack()
 		tblBullet.AmmoType  = self.WeaponTable.AmmoType
 		if isMelee then tblBullet.AmmoType = "pistol" end
 		tblBullet.Callback = function(plyShooter, trcTrace, tblDamageInfo)
-			--if tblDamageInfo:GetDamagePosition():Distance(self.Owner:GetPos()) > intMaxRange then tblDamageInfo:SetDamage(0) return false, false end
+			--if tblDamageInfo:GetDamagePosition():Distance(self:GetOwner():GetPos()) > intMaxRange then tblDamageInfo:SetDamage(0) return false, false end
 			self:BulletCallBack(plyShooter, trcTrace, tblDamageInfo)
 		end
 		if intRange <= intMaxRange then
-			self.Owner:FireBullets(tblBullet)
+			self:GetOwner():FireBullets(tblBullet)
 		end
 		if SERVER and not isMelee then
 			self:SetClip1(self:Clip1() - 1)
@@ -114,7 +114,7 @@ function SWEP:WeaponAttack()
 		if not intFireRate then return end
 	
 		if SERVER then
-			self.Owner:SlowDown((1 / intFireRate))
+			self:GetOwner():SlowDown((1 / intFireRate))
 		end
 		if (game.SinglePlayer() and SERVER) or (not game.SinglePlayer() and CLIENT) and self.WeaponTable.Sound then
 			self:EmitSound(self.WeaponTable.Sound)
@@ -146,20 +146,20 @@ end
 
 function SWEP:GetDamage(intDamage)
 	for strStat, tblStatTable in pairs(GAMEMODE.DataBase.Stats) do
-		if self.Owner:GetStat(strStat) and tblStatTable.DamageMod then
-			intDamage = tblStatTable:DamageMod(self.Owner, self.Owner:GetStat(strStat), intDamage)
+		if self:GetOwner():GetStat(strStat) and tblStatTable.DamageMod then
+			intDamage = tblStatTable:DamageMod(self:GetOwner(), self:GetOwner():GetStat(strStat), intDamage)
 		end
 	end
-	intDamage = self.Owner:CallSkillHook("damage_mod", intDamage)
+	intDamage = self:GetOwner():CallSkillHook("damage_mod", intDamage)
 	return intDamage
 end
 
 function SWEP:GetFireRate(intFireRate)
 	for strStat, tblStatTable in pairs(GAMEMODE.DataBase.Stats) do
-		if self.Owner:GetStat(strStat) and tblStatTable.FireRateMod then
-			intFireRate = tblStatTable:FireRateMod(self.Owner, self.Owner:GetStat(strStat), intFireRate)
+		if self:GetOwner():GetStat(strStat) and tblStatTable.FireRateMod then
+			intFireRate = tblStatTable:FireRateMod(self:GetOwner(), self:GetOwner():GetStat(strStat), intFireRate)
 		end
 	end
-	intFireRate = self.Owner:CallSkillHook("firerate_mod", intFireRate)
+	intFireRate = self:GetOwner():CallSkillHook("firerate_mod", intFireRate)
 	return intFireRate
 end

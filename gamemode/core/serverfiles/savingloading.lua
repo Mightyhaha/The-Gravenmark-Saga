@@ -41,11 +41,16 @@ function Player:LoadGame()
 	-- Load the player's game
 	local steamID = string.Replace(self:SteamID(), ":", "!")
 	if game.SinglePlayer() or steamID ~= "STEAM_ID_PENDING" then
-		local FileName = "underdone/" .. steamID .. ".txt"
+		local FileName = self:GetSaveFileName()
+		local savedGameData = file.Exists(FileName, "DATA") and UD_ReadSaveFile(FileName)
 
-		if file.Exists(FileName, "DATA") then
-			local savedGameData = util.JSONToTable(util.Decompress(file.Read(FileName)) or "")
+		if file.Exists(FileName, "DATA") and not savedGameData then
+			local BrokenCopy = string.gsub(FileName, "%.txt$", "_unreadable.txt")
+			file.Write(BrokenCopy, file.Read(FileName, "DATA") or "")
+			ErrorNoHalt("[Gravenmark] Could not read save " .. FileName .. ", kept a copy as " .. BrokenCopy .. "\n")
+		end
 
+		if savedGameData then
 			self:SetNWInt("exp", savedGameData.Exp or 0)
 			self:SetNWInt("SkillPoints", self:GetDeservedSkillPoints())
 
@@ -79,6 +84,7 @@ function Player:LoadGame()
 	-- Finish loading
 	self.Loaded = true
 	self:SetNWBool("Loaded", true)
+	self:SaveGame()
 
 	hook.Run("UD_Hook_PlayerLoad", self)
 	for _, ply in pairs(player.GetAll()) do
@@ -90,10 +96,26 @@ function Player:LoadGame()
 	end
 end
 
+function Player:GetSaveFileName(SubFolder)
+	local SteamID = string.Replace(self:SteamID(), ":", "!")
+	return GAMEMODE.DataFolder .. "/" .. (SubFolder and SubFolder .. "/" or "") .. SteamID .. ".txt"
+end
+
+function UD_ReadSaveFile(FileName)
+	local Raw = file.Read(FileName, "DATA")
+	if not Raw or Raw == "" then return nil end
+	return util.JSONToTable(util.Decompress(Raw) or Raw)
+end
+
+local AutoSaveInterval = 30
+
 function Player:SaveGame()
-	if not self.Loaded then return end
-	if GAMEMODE.StopSaving then return end
-	if not self.Data then return end
+	if not self.Loaded or GAMEMODE.StopSaving or not self.Data then return end
+	self.UD_NeedsSave = true
+end
+
+function Player:SaveGameNow(SubFolder)
+	if not self.Loaded or GAMEMODE.StopSaving or not self.Data then return end
 
 	local SaveTable = table.Copy(self.Data)
 	SaveTable.Inventory = {}
@@ -116,15 +138,20 @@ function Player:SaveGame()
 		end
 	end
 
-	local SteamID = string.Replace(self:SteamID(), ":", "!")
-	if SteamID ~= "STEAM_ID_PENDING" then
-		local FileName = "underdone/" .. SteamID .. ".txt"
+	if self:SteamID() ~= "STEAM_ID_PENDING" then
 		SaveTable.Exp = self:GetNWInt("exp")
-		file.Write(FileName, util.Compress(util.TableToJSON(SaveTable)))
+		file.Write(self:GetSaveFileName(SubFolder), util.Compress(util.TableToJSON(SaveTable)))
 	end
+	if not SubFolder then self.UD_NeedsSave = false end
 end
 
-local function PlayerSave(ply) ply:SaveGame() end
-hook.Add("PlayerDisconnected", "PlayerSavePlayerDisconnected", PlayerSave)
-hook.Add("UD_Hook_PlayerLevelUp", "PlayerSaveUD_Hook_PlayerLevelUp", PlayerSave)
-hook.Add("ShutDown", "PlayerSaveShutDown", function() for _, ply in pairs(player.GetAll()) do PlayerSave(ply) end end)
+local function PlayerSaveNow(ply) ply:SaveGameNow() end
+hook.Add("PlayerDisconnected", "PlayerSavePlayerDisconnected", PlayerSaveNow)
+hook.Add("UD_Hook_PlayerLevelUp", "PlayerSaveUD_Hook_PlayerLevelUp", PlayerSaveNow)
+hook.Add("ShutDown", "PlayerSaveShutDown", function() for _, ply in ipairs(player.GetAll()) do PlayerSaveNow(ply) end end)
+
+timer.Create("UD_AutoSave", AutoSaveInterval, 0, function()
+	for _, ply in ipairs(player.GetAll()) do
+		if ply.UD_NeedsSave then ply:SaveGameNow() end
+	end
+end)
