@@ -41,10 +41,17 @@ An item with `Item.QuestItem = "<quest name>"` only drops while the killer has t
 
 | Console command | What it does |
 | --- | --- |
-| `UD_Dev_EditMap` | Place NPC spawn points and world props. Pick a set, add objects where you look, edit them, then press the save icon. Saved per map to `data/underdone/Maps/<map>.txt`. |
+| `UD_Dev_EditMap` | Opens or closes the map editor for NPC spawn points and props. Layouts are saved per map to `data/underdone/Maps/<map>.txt`. |
 | `UD_Dev_EditPaperDoll` | Position worn equipment models on the player and copy the offsets for an item definition. |
 
-A spawn point only spawns its NPC once its respawn time is above 0.
+Using the map editor:
+
+- You can move and look around freely while it is open. Hold **C** to get a mouse cursor for the editor window or for clicking in the world.
+- **Left-click** the ground (with the crosshair, or with the cursor while holding C) to place a marker, then pick its settings and press **Add**. Nothing spawns until you add it.
+- **Left-click** an existing marker to select it: change its settings and press **Apply changes**, **Move** it to your next click, or **Remove** it.
+- **Right-click** cancels or deselects. Your weapon does not fire while the editor is open.
+- A spawn point spawns **How many NPCs** at once, randomly inside its **Spawn area radius** (0 means exactly on the marker). Each one respawns its own **Respawn** seconds after dying.
+- Press **Save map** when you are done; the window shows when there are unsaved changes.
 
 ## Client options
 
