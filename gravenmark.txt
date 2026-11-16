@@ -8,7 +8,7 @@
 	"author_name" "Polkm, Zeni, twentysix and Q2F2 (Underdone)"
 	"author_url"  "https://github.com/Etothepowerof26/underdone"
 
-	"maps"        "^ud_"
+	"maps"        "^rp_bremergard"
 
 	"hide"        "0"
 	"menusystem"  "1"

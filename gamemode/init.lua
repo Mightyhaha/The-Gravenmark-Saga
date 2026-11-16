@@ -4,7 +4,6 @@ AddCSLuaFile("cl_init.lua")
 include("shared.lua")
 include("core/sharedfiles/database/items/sh_items_base.lua")
 include("core/sh_resource.lua")
-resource.AddFile("maps/ud_rebellland_beta_02b.bsp")
 
 -- Add network strings
 local NWStrings = {
@@ -18,6 +17,8 @@ local NWStrings = {
 	"UD_RemoveSpawnPoint",
 	"UD_UpdateWorldProp",
 	"UD_RemoveWorldProp",
+	"UD_UpdatePlayerSpawn",
+	"UD_RemovePlayerSpawn",
 	"UD_UpdateCurrentBook",
 	"UD_UpdateTradeItem",
 	"UD_UpdateQuest",
@@ -56,6 +57,12 @@ function GM:PlayerSpawn(ply)
 
 	-- Stops status effects continuing after respawn
 	ply:ClearStatusEffects()
+
+	local Spawn = self:PickPlayerSpawn()
+	if Spawn then
+		ply:SetPos(Spawn.Position + Vector(0, 0, 4))
+		ply:SetEyeAngles(Angle(0, Spawn.Angle.y, 0))
+	end
 end
 
 function GM:PlayerLoadout(ply)
@@ -82,14 +89,31 @@ local ignoreClasses = {
 	weapon_primaryweapon = true
 }
 
+GM.SearchableProps = {
+	{Model = "models/props/cs_militia/footlocker01_closed.mdl", OpenModel = "models/props/cs_militia/footlocker01_open.mdl"},
+	{Model = "models/props/furnitures/humans/chests/poor_chest_01.mdl"},
+	{Model = "models/props/furnitures/humans/chests/big_chest_metal01_dirty.mdl"},
+	{Model = "models/props/furnitures/humans/chests/big_chest_metal_cov01.mdl"},
+}
+GM.SearchLoot = {"money", "wood", "item_canspoilingmeat", "item_orange"}
+
 function GM:UseKeyPressed(ply)
 	local trace = ply:GetEyeTrace()
 
-	-- TODO: hardcoded, room for improvement here
-	ply:SearchWorldProp(trace.Entity, "models/props/cs_militia/footlocker01_closed.mdl",
-	{"money", "wood", "item_canspoilingmeat", "item_orange"}, 1, "models/props/cs_militia/footlocker01_open.mdl")
+	for _, Searchable in ipairs(self.SearchableProps) do
+		ply:SearchWorldProp(trace.Entity, Searchable.Model, self.SearchLoot, 1, Searchable.OpenModel)
+	end
 	ply:SearchQuestProp(trace.Entity, "models/props/cs_militia/caseofbeer01.mdl", "quest_beer", 1)
 	ply:SearchQuestProp(trace.Entity, "models/props_c17/oildrum001.mdl", "quest_oil", 1)
+
+	local entStation = trace.Entity
+	if IsValid(entStation) then
+		local strStation = self:GetStationOf(entStation:GetModel())
+		if strStation and entStation:GetPos():DistToSqr(ply:GetPos()) <= UseDistance then
+			ply:ConCommand("UD_OpenCraftMenu " .. strStation)
+			return
+		end
+	end
 
 	local UseTarget
 	local dist = math.huge

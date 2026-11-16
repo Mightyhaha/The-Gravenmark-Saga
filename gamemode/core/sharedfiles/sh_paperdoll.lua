@@ -10,7 +10,7 @@ end)
 concommand.Add("udk_edit_items_clearpaperdoll", function(ply, command, args)
 	for strSlot, strItem in pairs(ply.Data.Paperdoll or {}) do
 		local tblItemTable = ItemTable(strItem)
-		if tblItemTable.Use then tblItemTable:Use(ply, tblItemTable) end
+		if tblItemTable.Use then tblItemTable:Use(ply, tblItemTable, strSlot) end
 	end
 end)
 
@@ -55,7 +55,7 @@ function Player:SetPaperDoll(strSlot, strItem)
 		for strChkSlot, strChkItem in pairs(self.Data.Paperdoll or {}) do
 			local tblSlotTable = GAMEMODE.DataBase.Slots[strChkSlot]
 			if strChkSlot ~= strSlot and tblSlotTable.ShouldClear and tblSlotTable:ShouldClear(self, tblItemTable) then
-				self:UseItem(strChkItem)
+				self:UseItem(strChkItem, strChkSlot)
 			end
 		end
 		SendNetworkMessage("UD_UpdatePaperDoll", player.GetAll(), {self, strSlot, self:GetSlot(strSlot)})
@@ -66,6 +66,58 @@ end
 function Player:GetSlot(strSlot)
 	if self.Data and self.Data.Paperdoll and self.Data.Paperdoll[strSlot] then return self.Data.Paperdoll[strSlot] end
 	return
+end
+
+function GetItemSlots(tblItemTable)
+	if not tblItemTable then return {} end
+	if tblItemTable.SlotGroup then
+		local tblSlots = {}
+		for strName, tblSlot in pairs(GAMEMODE.DataBase.Slots) do
+			if tblSlot.Group == tblItemTable.SlotGroup then table.insert(tblSlots, strName) end
+		end
+		table.sort(tblSlots)
+		return tblSlots
+	end
+	return {tblItemTable.Slot}
+end
+
+function SlotAcceptsItem(strSlot, tblItemTable)
+	return table.HasValue(GetItemSlots(tblItemTable), strSlot)
+end
+
+function Player:GetWornSlots(strItem)
+	local tblWorn = {}
+	for _, strSlot in ipairs(GetItemSlots(ItemTable(strItem))) do
+		if self:GetSlot(strSlot) == strItem then table.insert(tblWorn, strSlot) end
+	end
+	return tblWorn
+end
+
+function Player:IsWearing(strItem)
+	return #self:GetWornSlots(strItem) > 0
+end
+
+function Player:PickEquipSlot(tblItemTable, strSlot)
+	local tblSlots = GetItemSlots(tblItemTable)
+	if #tblSlots == 0 then return nil end
+	local tblWorn = self:GetWornSlots(tblItemTable.Name)
+
+	if strSlot then
+		if not table.HasValue(tblSlots, strSlot) then return nil end
+		if self:GetSlot(strSlot) == tblItemTable.Name then return strSlot end
+		if not self:HasItem(tblItemTable.Name, #tblWorn + 1) then return nil end
+		return strSlot
+	end
+
+	if #tblSlots == 1 then return tblSlots[1] end
+
+	if self:HasItem(tblItemTable.Name, #tblWorn + 1) then
+		for _, strFree in ipairs(tblSlots) do
+			if not self:GetSlot(strFree) then return strFree end
+		end
+	end
+	if #tblWorn > 0 then return tblWorn[#tblWorn] end
+	return tblSlots[1]
 end
 
 if CLIENT then
@@ -98,10 +150,14 @@ if CLIENT then
 		if strItem and strSlot then
 			local tblItemTable = ItemTable(strItem)
 			local tblSlotTable = SlotTable(strSlot)
-			if tblItemTable and tblSlotTable then
+			if tblItemTable and tblSlotTable and not tblSlotTable.NoModel then
 				local entNewPart = GAMEMODE:BuildModel(tblItemTable.Model)
 				if not entNewPart then error("help") end
 				entNewPart:SetParent(self)
+				if istable(tblItemTable.Model) and tblItemTable.Model[1] and tblItemTable.Model[1].BoneMerge then
+					entNewPart:AddEffects(EF_BONEMERGE)
+					entNewPart.UD_BoneMerged = true
+				end
 				entNewPart.Item = strItem
 				entNewPart.Attachment = tblSlotTable.Attachment
 				GAMEMODE.PaperDollEnts[self:SteamID64()][strSlot] = entNewPart
@@ -123,6 +179,15 @@ if CLIENT then
 		end
 	end
 
+	function GM:GetPaperDollSlotTransform(plyPlayer, strAttachment)
+		if not IsValid(plyPlayer) or not strAttachment then return end
+		local intAttachment = plyPlayer:LookupAttachment(strAttachment)
+		local tblAttachment = intAttachment and intAttachment > 0 and plyPlayer:GetAttachment(intAttachment)
+		if tblAttachment then return tblAttachment.Pos, tblAttachment.Ang end
+		local intBone = plyPlayer:LookupBone(strAttachment)
+		if intBone then return plyPlayer:GetBonePosition(intBone) end
+	end
+
 	local LastPositionedFrame = -1
 	local function PositionPaperDolls()
 		if FrameNumber() == LastPositionedFrame then return end
@@ -142,7 +207,7 @@ if CLIENT then
 				GAMEMODE.PaperDollEnts[steamID64] = nil
 			elseif not plyPlayer:IsDormant() then
 				for strSlot, entTarget in pairs(tblPlayerTable or {}) do
-					local tblItemTable = IsValid(entTarget) and ItemTable(entTarget.Item)
+					local tblItemTable = IsValid(entTarget) and not entTarget.UD_BoneMerged and ItemTable(entTarget.Item)
 					if tblItemTable then
 						local vecPos, angAng = GetSlotTransform(plyPlayer, entTarget)
 						if vecPos then

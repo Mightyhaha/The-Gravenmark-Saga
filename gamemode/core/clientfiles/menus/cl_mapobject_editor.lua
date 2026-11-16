@@ -2,6 +2,37 @@ GM.MapEditor = {}
 local Editor = GM.MapEditor
 
 Editor.Models = {
+	"models/props/furnitures/humans/chests/poor_chest_01.mdl",
+	"models/props/furnitures/humans/chests/big_chest_metal01_dirty.mdl",
+	"models/props/furnitures/humans/chests/big_chest_metal_cov01.mdl",
+	"models/props/furnitures/humans/barrel_large/barrel_large.mdl",
+	"models/props/furnitures/humans/basket_cloth.mdl",
+	"models/props/furnitures/gob/l6_basket_01/l6_basket_01.mdl",
+	"models/props/furnitures/humans/table01.mdl",
+	"models/props/furnitures/humans/l02_tablebench.mdl",
+	"models/props/furnitures/humans/bench01_big.mdl",
+	"models/props/furnitures/humans/poor_bench_01.mdl",
+	"models/props/furnitures/humans/stool02.mdl",
+	"models/props/furnitures/humans/shelf_01.mdl",
+	"models/props/furnitures/mn/mn_chairrich.mdl",
+	"models/props/furnitures/l10/l10_bed_01.mdl",
+	"models/props/furnitures/gob/l6_mattress/l6_mattress.mdl",
+	"models/props/tools/humans/campbed01.mdl",
+	"models/props/tools/humans/firecamp01/brazier.mdl",
+	"models/props/tools/humans/training_dummy/training_dummy.mdl",
+	"models/skyrimznalecc/smallimperialtent.mdl",
+	"models/skyrimznalecc/implargetent.mdl",
+	"models/skyrimznalecc/nordlargetent.mdl",
+	"models/skyrimznalecc/bedroll01.mdl",
+	"models/props/kingdom/spike_wall.mdl",
+	"models/props/kingdom/wheel.mdl",
+	"models/dimidrol/transport/cart_cod_01.mdl",
+	"models/props/furnitures/humans/abreuvoirs/abreuvoir01.mdl",
+	"models/props_forest/fence_trail_128.mdl",
+	"models/props_forest/fence_trail_256.mdl",
+	"models/props_shacks/fishing_net01.mdl",
+	"models/items/magic/scrolls/scroll_rolled.mdl",
+	"models/props/debris/skeleton/cr_skel_pose01.mdl",
 	"models/props_junk/wood_crate001a.mdl",
 	"models/props_junk/wood_crate002a.mdl",
 	"models/props_c17/oildrum001.mdl",
@@ -33,7 +64,9 @@ local ColorPlaced = Color(255, 255, 255, 200)
 local ColorSelected = Color(255, 200, 0, 255)
 local ColorPending = Color(80, 255, 80, 255)
 local ColorMoving = Color(80, 200, 255, 255)
+local ColorPlayerSpawn = Color(120, 170, 255, 220)
 local ColorOutline = Color(0, 0, 0, 255)
+local ModeNouns = {npc = "spawn point", prop = "prop", player = "player spawn"}
 
 Editor.Mode = "npc"
 Editor.Pending = nil
@@ -47,6 +80,7 @@ local Rebuild
 
 local function ObjectList()
 	if Editor.Mode == "npc" then return GAMEMODE.MapEntities.NPCSpawnPoints end
+	if Editor.Mode == "player" then return GAMEMODE.MapEntities.PlayerSpawns end
 	return GAMEMODE.MapEntities.WorldProps
 end
 
@@ -65,7 +99,7 @@ local function PositionArgs(Position)
 end
 
 local function StatusText()
-	local Noun = Editor.Mode == "npc" and "spawn point" or "prop"
+	local Noun = ModeNouns[Editor.Mode]
 	local Status
 	if Editor.Moving then
 		Status = "Click the spot to move the selected " .. Noun .. " to. Right-click cancels."
@@ -76,7 +110,7 @@ local function StatusText()
 	else
 		Status = "Left-click the ground to place a " .. Noun .. ", or click a marker to edit it."
 	end
-	local Counts = #GAMEMODE.MapEntities.NPCSpawnPoints .. " spawn points, " .. #GAMEMODE.MapEntities.WorldProps .. " props"
+	local Counts = #GAMEMODE.MapEntities.NPCSpawnPoints .. " NPC spawns, " .. #GAMEMODE.MapEntities.WorldProps .. " props, " .. #GAMEMODE.MapEntities.PlayerSpawns .. " player spawns"
 	if Editor.Dirty then Counts = Counts .. "  -  unsaved changes" end
 	local Mouse = Editor.CursorEnabled and "Mouse: ON (press C to look around)" or "Mouse: OFF (press C to use this window)"
 	return Status .. "\n" .. Counts .. "\n" .. Mouse
@@ -148,6 +182,8 @@ local function Select(Key)
 	local Yaw = Object.Angle and math.Round(math.NormalizeAngle(Object.Angle.y)) or 0
 	if Editor.Mode == "npc" then
 		Editor.Edit = {NPC = Object.NPC, Level = Object.Level or 5, SpawnTime = Object.SpawnTime or 30, Radius = Object.Radius or 0, Count = Object.Count or 1, Yaw = Yaw}
+	elseif Editor.Mode == "player" then
+		Editor.Edit = {Yaw = Yaw}
 	else
 		Editor.Edit = {Model = Object.Model, Yaw = Yaw}
 	end
@@ -181,7 +217,7 @@ local function BuildSpawnControls(Body, Values)
 		if IsValid(AddSpawnButton) then AddSpawnButton:SetEnabled(true) end
 	end
 
-	AddSlider(Body, "Level", 1, 100, Values.Level, function(Value) Values.Level = Value end)
+	AddSlider(Body, "Level", 1, 150, Values.Level, function(Value) Values.Level = Value end)
 	AddSlider(Body, "Respawn (seconds)", 1, 900, Values.SpawnTime, function(Value) Values.SpawnTime = Value end)
 	AddSlider(Body, "How many NPCs", 1, 20, Values.Count, function(Value) Values.Count = Value end)
 	AddSlider(Body, "Spawn area radius", 0, 1000, Values.Radius, function(Value) Values.Radius = Value end)
@@ -221,7 +257,16 @@ local function BuildPropControls(Body, Values)
 	Grid:DockMargin(0, 0, 0, 4)
 	Grid:SetSpaceX(2)
 	Grid:SetSpaceY(2)
+	if not util.IsValidModel(Values.Model or "") then
+		for _, Model in ipairs(Editor.Models) do
+			if util.IsValidModel(Model) then
+				Values.Model = Model
+				break
+			end
+		end
+	end
 	for _, Model in ipairs(Editor.Models) do
+		if not util.IsValidModel(Model) then continue end
 		local Icon = Grid:Add("SpawnIcon")
 		Icon:SetSize(52, 52)
 		Icon:SetModel(Model)
@@ -263,6 +308,37 @@ local function BuildPropControls(Body, Values)
 	end
 end
 
+local function BuildPlayerSpawnControls(Body, Values)
+	AddLabel(Body, "Players appear at a random free player spawn. With none placed, the map's own spawn is used.")
+	AddSlider(Body, "Facing", -180, 180, Values.Yaw, function(Value) Values.Yaw = Value end)
+
+	if Editor.SelectedKey then
+		local Key = Editor.SelectedKey
+		AddButton(Body, "Apply changes", function()
+			SendCommand("UD_Dev_EditMap_UpdatePlayerSpawn", Key, Values.Yaw)
+			UpdateStatus()
+		end)
+		AddButton(Body, "Move to a new spot", function()
+			Editor.Moving = true
+			UpdateStatus()
+		end)
+		AddButton(Body, "Remove", function()
+			SendCommand("UD_Dev_EditMap_RemovePlayerSpawn", Key)
+			Deselect()
+		end)
+		AddButton(Body, "Deselect", Deselect)
+	else
+		AddButton(Body, "Add player spawn", function()
+			if not Editor.Pending then return end
+			local x, y, z = PositionArgs(Editor.Pending.Position)
+			SendCommand("UD_Dev_EditMap_AddPlayerSpawn", x, y, z, Values.Yaw)
+			Editor.Pending = nil
+			Rebuild()
+		end)
+		AddButton(Body, "Cancel", Cancel)
+	end
+end
+
 Rebuild = function()
 	if not IsValid(Editor.Frame) then return end
 	UpdateStatus()
@@ -274,6 +350,8 @@ Rebuild = function()
 	end
 	if Editor.Mode == "npc" then
 		BuildSpawnControls(Body, CurrentValues())
+	elseif Editor.Mode == "player" then
+		BuildPlayerSpawnControls(Body, CurrentValues())
 	else
 		BuildPropControls(Body, CurrentValues())
 	end
@@ -283,9 +361,9 @@ local function FlatDistance(A, B)
 	return math.sqrt((A.x - B.x) ^ 2 + (A.y - B.y) ^ 2)
 end
 
-local function FindSpawnPointAt(Position)
+local function FindSpawnPointAt(Position, tblList)
 	local BestKey, BestDistance = nil, SelectReach
-	for Key, Spawn in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
+	for Key, Spawn in ipairs(tblList) do
 		local Distance = FlatDistance(Position, Spawn.Position)
 		if Distance < BestDistance and math.abs(Position.z - Spawn.Position.z) < 96 then
 			BestKey, BestDistance = Key, Distance
@@ -314,15 +392,17 @@ local function HandleWorldClick(Trace)
 	if not Trace or not Trace.Hit then return end
 	if Editor.Moving and Editor.SelectedKey then
 		local x, y, z = PositionArgs(Trace.HitPos)
-		local Command = Editor.Mode == "npc" and "UD_Dev_EditMap_MoveSpawnPoint" or "UD_Dev_EditMap_MoveWorldProp"
-		SendCommand(Command, Editor.SelectedKey, x, y, z)
+		local MoveCommands = {npc = "UD_Dev_EditMap_MoveSpawnPoint", prop = "UD_Dev_EditMap_MoveWorldProp", player = "UD_Dev_EditMap_MovePlayerSpawn"}
+		SendCommand(MoveCommands[Editor.Mode], Editor.SelectedKey, x, y, z)
 		Editor.Moving = false
 		UpdateStatus()
 		return
 	end
 	local Key
 	if Editor.Mode == "npc" then
-		Key = FindSpawnPointAt(Trace.HitPos)
+		Key = FindSpawnPointAt(Trace.HitPos, GAMEMODE.MapEntities.NPCSpawnPoints)
+	elseif Editor.Mode == "player" then
+		Key = FindSpawnPointAt(Trace.HitPos, GAMEMODE.MapEntities.PlayerSpawns)
 	else
 		Key = FindWorldPropAt(Trace)
 	end
@@ -378,6 +458,7 @@ function Editor.Open()
 	ModeBox:Dock(FILL)
 	ModeBox:AddChoice("NPC spawn points", "npc", Editor.Mode == "npc")
 	ModeBox:AddChoice("Props", "prop", Editor.Mode == "prop")
+	ModeBox:AddChoice("Player spawns", "player", Editor.Mode == "player")
 	ModeBox.OnSelect = function(_, _, _, Data)
 		Editor.Mode = Data
 		Editor.Pending = nil
@@ -502,6 +583,15 @@ hook.Add("PostDrawTranslucentRenderables", "UD_MapEditorMarkers", function(Drawi
 			end
 		end
 		if Editor.Pending then DrawSpawnMarker(Editor.Pending.Position, Editor.Settings, ColorPending) end
+	elseif Editor.Mode == "player" then
+		for Key, Spawn in ipairs(GAMEMODE.MapEntities.PlayerSpawns) do
+			if Key == Editor.SelectedKey then
+				DrawSpawnMarker(Spawn.Position, Editor.Edit, Editor.Moving and ColorMoving or ColorSelected)
+			else
+				DrawSpawnMarker(Spawn.Position, {Yaw = Spawn.Angle and Spawn.Angle.y}, ColorPlayerSpawn)
+			end
+		end
+		if Editor.Pending then DrawSpawnMarker(Editor.Pending.Position, {Yaw = Editor.Settings.Yaw}, ColorPending) end
 	else
 		for Key, Prop in ipairs(GAMEMODE.MapEntities.WorldProps) do
 			local PropEntity = Entity(Prop.EntIndex or -1)
@@ -536,6 +626,11 @@ hook.Add("HUDPaint", "UD_MapEditorLabels", function()
 			DrawLabel(Spawn.Position, Text, Key == Editor.SelectedKey and ColorSelected or White)
 		end
 		if Editor.Pending then DrawLabel(Editor.Pending.Position, "New spawn point", ColorPending) end
+	elseif Editor.Mode == "player" then
+		for Key, Spawn in ipairs(GAMEMODE.MapEntities.PlayerSpawns) do
+			DrawLabel(Spawn.Position, "Player spawn #" .. Key, Key == Editor.SelectedKey and ColorSelected or ColorPlayerSpawn)
+		end
+		if Editor.Pending then DrawLabel(Editor.Pending.Position, "New player spawn", ColorPending) end
 	else
 		for Key, Prop in ipairs(GAMEMODE.MapEntities.WorldProps) do
 			DrawLabel(Prop.Position, "#" .. Key .. "  " .. string.GetFileFromFilename(Prop.Model or ""), Key == Editor.SelectedKey and ColorSelected or White)

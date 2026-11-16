@@ -21,9 +21,12 @@ function Entity:AddItem(strItem, intAmount)
 	end
 	if intAmount == 0 then return false end
 	if SERVER then
-		if self.Data.Paperdoll and intAmount < 0 then
-			if self.Data.Inventory[strItem] == 1 and self.Data.Paperdoll[tblItemTable.Slot] == strItem then
-				self:UseItem(strItem)
+		if self:IsPlayer() and self.Data.Paperdoll and intAmount < 0 then
+			local intLeft = self.Data.Inventory[strItem] + intAmount
+			local tblWorn = self:GetWornSlots(strItem)
+			for i = #tblWorn, intLeft + 1, -1 do
+				self.NextSwitch = 0
+				self:UseItem(strItem, tblWorn[i])
 			end
 		end
 	end

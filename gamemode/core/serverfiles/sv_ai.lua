@@ -40,7 +40,7 @@ local function UpdateNPCLeash()
 			local Nearest, NearestDistSqr = nil, AggroRangeSqr
 			for _, ply in ipairs(Players) do
 				local PlyDistSqr = ply:GetPos():DistToSqr(NPCPos)
-				if PlyDistSqr < NearestDistSqr then
+				if PlyDistSqr < NearestDistSqr and ply:Alive() and npc:Disposition(ply) == GAMEMODE.RelationHate then
 					Nearest, NearestDistSqr = ply, PlyDistSqr
 				end
 			end
@@ -89,7 +89,7 @@ function GM:OnNPCKilled(Target, Killer, weapon)
 		for Item, Info in pairs(NPCTable.Drops or {}) do
 			local ItemTable = ItemTable(Item)
 			--Check Level of player and of npc
-			if Target:GetLevel() >= (Info.MinLevel or 0) then
+			if Target:GetLevel() >= (Info.MinLevel or 0) and Target:GetLevel() <= (Info.MaxLevel or math.huge) then
 				if not ItemTable.QuestItem or (Killer:GetQuest(ItemTable.QuestItem) and not Killer:HasCompletedQuest(ItemTable.QuestItem)) then
 					Item, Info = Killer:CallSkillHook("drop_mod", Item, Info)
 					local Chance = (Info.Chance or 0) * (1 + (Killer:GetStat("stat_luck") / 45))
@@ -120,8 +120,8 @@ local function NPCAdjustDamage(Victim, DamageInfo)
 	local Invincible = NPCTable.Invincible or Attacker.Race == NPCTable.Race
 	if Attacker:IsPlayer() and not Invincible then
 		local DisplayColor = "white"
-		DamageInfo:SetDamage(math.Round(DamageInfo:GetDamage() * (1 / Victim:GetNWInt("level"))))
-		if math.random(1, math.Round(20 / (1 + (Attacker:GetStat("stat_luck") / 50)))) == 1 then
+		DamageInfo:SetDamage(DamageInfo:GetDamage() * GAMEMODE:GetOutgoingDamageScale(Victim:GetNWInt("level"), Attacker:GetLevel()))
+		if math.random() < GAMEMODE:GetCritChance(Attacker, ItemTable(Attacker:GetSlot("slot_primaryweapon"))) then
 			DamageInfo:SetDamage(math.Round(DamageInfo:GetDamage() * 2))
 			Attacker:CreateIndicator("Crit!", DamageInfo:GetDamagePosition(), "blue", true)
 			DisplayColor = "blue"

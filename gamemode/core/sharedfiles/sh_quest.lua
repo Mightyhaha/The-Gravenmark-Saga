@@ -125,8 +125,10 @@ if SERVER then
 
 	function Player:TurnInQuest(strQuest)
 		if not IsValid(self) then return end
-		if not self.UseTarget.Quest or self.UseTarget:GetPos():Distance(self:GetPos()) > 100 then return end
+		if not IsValid(self.UseTarget) or not self.UseTarget.Quest or self.UseTarget:GetPos():Distance(self:GetPos()) > 100 then return end
 		local tblQuestTable = QuestTable(strQuest)
+		if not tblQuestTable then return end
+		if tblQuestTable.TurnInNPC and self.UseTarget:GetNWString("npc") ~= tblQuestTable.TurnInNPC then return end
 		if self:CanTurnInQuest(strQuest) then
 			self:TakeItems(tblQuestTable.ObtainItems)
 			self:GiveItems(tblQuestTable.GainedItems)
@@ -141,7 +143,7 @@ if SERVER then
 
 	function Player:AcceptQuest(strQuest)
 		if not IsValid(self) then return end
-		if not self.UseTarget.Quest or self.UseTarget:GetPos():Distance(self:GetPos()) > 100 then return end
+		if not IsValid(self.UseTarget) or not self.UseTarget.Quest or self.UseTarget:GetPos():Distance(self:GetPos()) > 100 then return end
 		if self:CanAcceptQuest(strQuest) then
 			if QuestTable(strQuest).StartingItems then
 				if self:HasRoomFor(QuestTable(strQuest).StartingItems) then
@@ -154,6 +156,51 @@ if SERVER then
 		end
 	end
 	concommand.Add("UD_AcceptQuest", function(ply, command, args) ply:AcceptQuest(args[1]) end)
+
+	local SearchReachSqr = 150 ^ 2
+
+	local function IsSearchableProp(entTarget)
+		local strModel = string.lower(entTarget:GetModel() or "")
+		for _, tblSearchable in ipairs(GAMEMODE.SearchableProps or {}) do
+			if string.lower(tblSearchable.Model) == strModel then return true end
+		end
+		return false
+	end
+
+	local function NextSearchQuestItem(ply)
+		for strQuest, tblInfo in pairs(ply.Data.Quests or {}) do
+			local tblQuestTable = QuestTable(strQuest)
+			if tblQuestTable and not tblInfo.Done then
+				for strItem, intNeeded in pairs(tblQuestTable.ObtainItems or {}) do
+					local tblItemTable = ItemTable(strItem)
+					if tblItemTable and tblItemTable.FoundBySearching and ply:GetItem(strItem) < intNeeded then
+						return strItem
+					end
+				end
+			end
+		end
+	end
+
+	hook.Add("KeyPress", "UD_QuestChestSearch", function(ply, intKey)
+		if intKey ~= IN_USE or not ply.Data or not ply:Alive() then return end
+		local entTarget = ply:GetEyeTrace().Entity
+		if not IsValid(entTarget) or entTarget.IsBeingSearched or not IsSearchableProp(entTarget) then return end
+		if entTarget:GetPos():DistToSqr(ply:GetPos()) > SearchReachSqr then return end
+		local strItem = NextSearchQuestItem(ply)
+		if not strItem then return end
+		ply.UD_QuestSearched = ply.UD_QuestSearched or {}
+		local strKey = strItem .. ":" .. entTarget:EntIndex()
+		if ply.UD_QuestSearched[strKey] then return end
+		ply.UD_QuestSearched[strKey] = true
+		timer.Simple(3, function()
+			if not IsValid(ply) then return end
+			if not ply:QuestItem(strItem) or not ply:AddItem(strItem, 1) then
+				ply.UD_QuestSearched[strKey] = nil
+				return
+			end
+			ply:CreateNotification("Found " .. ItemTable(strItem).PrintName)
+		end)
+	end)
 end
 
 if CLIENT then

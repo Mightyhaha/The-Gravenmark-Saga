@@ -2,16 +2,47 @@
 local Entity = FindMetaTable("Entity")
 local Player = FindMetaTable("Player")
 
+GM.MaxLevel = 150
+GM.ExpCurveVersion = 2
+
+local MaxLevel = GM.MaxLevel
+local ExpNeeded = {}
+local ExpTotal = {[1] = 0}
+for Level = 1, MaxLevel + 1 do
+	ExpNeeded[Level] = math.floor(25 * Level + 1.5 * Level ^ 2)
+	ExpTotal[Level + 1] = ExpTotal[Level] + ExpNeeded[Level]
+end
+
+function ExpToNextLevel(level)
+	level = math.Clamp(math.floor(tonumber(level) or 1), 1, MaxLevel + 1)
+	return ExpNeeded[level]
+end
+
 function toExp(level)
-	local exp = tonumber(level) or 0
-	if exp <= 1 then exp = 0 end
-	return math.floor(math.pow(exp * 6, 2))
+	level = math.floor(tonumber(level) or 1)
+	if level <= 1 then return 0 end
+	return ExpTotal[math.min(level, MaxLevel + 1)]
 end
 
 function toLevel(exp)
 	if not exp then return end
-	local level = math.sqrt(tonumber(exp) or 0)
-	return math.max(math.floor(level / 6), 1)
+	exp = tonumber(exp) or 0
+	local Low, High = 1, MaxLevel
+	while Low < High do
+		local Mid = math.ceil((Low + High) / 2)
+		if ExpTotal[Mid] <= exp then Low = Mid else High = Mid - 1 end
+	end
+	return Low
+end
+
+function LegacyExpToExp(exp)
+	exp = math.max(tonumber(exp) or 0, 0)
+	local OldLevel = math.max(math.floor(math.sqrt(exp) / 6), 1)
+	local OldBase = OldLevel <= 1 and 0 or (6 * OldLevel) ^ 2
+	local OldNext = (6 * (OldLevel + 1)) ^ 2
+	local Progress = math.Clamp((exp - OldBase) / (OldNext - OldBase), 0, 1)
+	if OldLevel >= MaxLevel then return toExp(MaxLevel) end
+	return toExp(OldLevel) + math.floor(Progress * ExpToNextLevel(OldLevel))
 end
 
 function Entity:GetLevel()

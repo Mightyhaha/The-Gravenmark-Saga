@@ -22,7 +22,7 @@ function PANEL:CreateHelp()
 	FAQ[8] = {Text = "How do I open the Inventory?", Color = White}
 	FAQ[9] = {Text = "To open your main menu containing the inventory and skills and players tabs press and hold the Q button, as you would in sandbox.", Color = DrakGray}
 	FAQ[10] = {Text = "How do I use my Skill Points?", Color = White}
-	FAQ[11] = {Text = "If you open your main mennu (see above) you will see a skills tab, goto that panel and you can see the full sellection of skills available. If you can not get a skill it will apear grayed out. To spend a Skill Point double click the icon of the skill you woudl like to get.", Color = DrakGray}
+	FAQ[11] = {Text = "Open the main menu (see above) and go to the Skills tab. There are five branches, and new rows unlock as you level up. Skills with a pulsing gold border can be learned: click one to spend a point. You get one point per level and a bonus point every 10 levels. Forget skills gives every point back for a fee.", Color = DrakGray}
 end
 
 function PANEL:LoadHelp()

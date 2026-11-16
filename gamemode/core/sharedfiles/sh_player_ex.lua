@@ -31,15 +31,16 @@ function Player:GetMaxWeight()
 end
 
 function Player:GetArmorRating()
-	local intTotalArmor = 1
+	local intGearArmor = 0
 	if not self.Data then return end
 	for strSlot, strItem in pairs(self.Data.Paperdoll or {}) do
 		local tblItemTable = ItemTable(strItem)
 		if tblItemTable and tblItemTable.Armor then
-			intTotalArmor = intTotalArmor + tblItemTable.Armor
+			intGearArmor = intGearArmor + tblItemTable.Armor
 		end
 	end
-	return intTotalArmor
+	if self.CallSkillHook then intGearArmor = self:CallSkillHook("armor_mod", intGearArmor) or intGearArmor end
+	return 1 + math.Round(intGearArmor)
 end
 
 if CLIENT then
@@ -81,28 +82,15 @@ end
 
 if SERVER then
 
-	function Player:SkillReset()
-		if self:HasItem("money", 500) then
-			for skill,lvl in pairs(self.Data.Skills or {}) do
-				if lvl > 0 then
-					self:SetSkill(skill, 0)
-				end
-			end
-			self:RemoveItem("money", 500)
-			self:SetNWInt("SkillPoints", self:GetDeservedSkillPoints())
-			self:SaveGame()
-		end
-	end
-	concommand.Add("UD_ResetSkills", function(ply, command, args) ply:SkillReset() end)
-
 	function Player:SearchQuestProp(Ent, strModel, strItem, strAmount)
 		if not IsValid(Ent) then return end
-		if Ent:GetModel() == strModel then
+		if string.lower(Ent:GetModel() or "") == string.lower(strModel) then
 			if self:QuestItem(strItem) then
 				local tblItemTable = ItemTable(strItem)
 				self:CreateNotification("Searching")
 				self:Freeze( true )
 				timer.Simple(5, function()
+					if not IsValid(self) then return end
 					self:CreateNotification("Found " .. tblItemTable.PrintName)
 					self:AddItem(strItem, strAmount)
 					self:Freeze( false )
@@ -113,12 +101,17 @@ if SERVER then
 
 	function Player:SearchWorldProp(Ent, strModel, strItem, strAmount, strModelChanging)
 		if not IsValid(Ent) then return end
-		if Ent:GetModel() == strModel then
+		if string.lower(Ent:GetModel() or "") == string.lower(strModel) then
 			if not Ent.IsBeingSearched then
 				self:CreateNotification("Searching")
 				Ent.IsBeingSearched = true
 				self:Freeze( true )
 				timer.Simple(3, function()
+					if not IsValid(self) then return end
+					if not IsValid(Ent) then
+						self:Freeze( false )
+						return
+					end
 					if math.random(1, 10) == 1 then
 						local FoundItem = table.Random(strItem)
 						local tblItemTable = ItemTable(FoundItem)
@@ -137,8 +130,8 @@ if SERVER then
 					end
 				end)
 				timer.Simple(8, function()
-					if IsValid(self) then
-						self:Freeze( false )
+					if IsValid(self) then self:Freeze( false ) end
+					if IsValid(Ent) then
 						Ent.IsBeingSearched = false
 						if strModelChanging then
 							Ent:EmitSound( Sound("items/ammocrate_close.wav") )
@@ -150,56 +143,96 @@ if SERVER then
 		end
 	end
 
-	local Complements = {
-		"Holy_Shit_Your_Cool",
-		"Nice_Man!",
-		"You_Are_Epic!",
-		"I_Wish_I_Was_As_Cool_As_You!",
-		"I_Jizzed!",
-		"Gratz!",
-		"I_Just_Shat_My_Pants!",
-		"Call_Me!",
-		"You_Should_Model!",
-		"God_Damn_I_Love_You!",
-		"You_Make_Me_Hot",
-		"I_Wish_I_Could_Touch_You",
-		"You_Now_With_10%_More_Cowbell",
-		"My_Girlfriend_Left_Me_For_You",
-		"Lets_Make_Party"
+	local Cheers = {
+		"Huzzah!",
+		"Well_Fought!",
+		"For_Dunmarrow!",
+		"The_Crowns_Rise!",
+		"Onward!",
+		"Glory_To_The_Trifecta!",
+		"A_True_Rebel!",
 	}
-	
+
 	local Colors = {
 		"purple",
 		"blue",
 		"orange",
-		"red",
 		"green",
 		"white"
 	}
-	
-	function Player:GiveExp(amount, boolShowExp)
-		local PlayerExp = tonumber(self:GetNWInt("exp")) or 0
-		local intCurrentExp = PlayerExp
+
+	local function TierUnlockedBetween(intFrom, intTo)
+		for intTier, intLevel in ipairs(GAMEMODE.SkillTierLevels or {}) do
+			if intLevel > intFrom and intLevel <= intTo then return intTier end
+		end
+	end
+
+	function Player:GiveExp(amount, boolShowExp, boolNoBonus)
+		amount = tonumber(amount) or 0
+		if amount > 0 and not boolNoBonus then
+			amount = math.Round(self:CallSkillHook("exp_mod", amount) or amount)
+		end
+		local intCurrentExp = tonumber(self:GetNWInt("exp")) or 0
 		local intPreExpLevel = self:GetLevel()
-		amount = tonumber(amount)
-		if intCurrentExp + amount >= 0 then
-			local intTotal = math.max(intCurrentExp + amount, toExp(intPreExpLevel))
-			self:SetNWInt("exp", tonumber(intTotal))
-			if boolShowExp then
-				self:CreateIndicator("+_" .. amount .. "_Exp", self:GetPos() + Vector(0, 0, 70), "green")
+		local intMaxExp = toExp(GAMEMODE.MaxLevel)
+		if amount > 0 and intCurrentExp >= intMaxExp then return end
+		if intCurrentExp + amount < 0 then return end
+		local intTotal = math.Clamp(intCurrentExp + amount, toExp(intPreExpLevel), intMaxExp)
+		self:SetNWInt("exp", intTotal)
+		if boolShowExp and intTotal > intCurrentExp then
+			self:CreateIndicator("+_" .. (intTotal - intCurrentExp) .. "_Exp", self:GetPos() + Vector(0, 0, 70), "green")
+		end
+		local intPostExpLevel = self:GetLevel()
+		if intPreExpLevel < intPostExpLevel then
+			self:ApplyLevelGrowth(intPreExpLevel, intPostExpLevel)
+			hook.Call("UD_Hook_PlayerLevelUp", GAMEMODE, self, intPostExpLevel - intPreExpLevel)
+			self:SetHealth(self:GetMaximumHealth())
+			self:CreateIndicator("Level_" .. intPostExpLevel, self:GetPos() + Vector(0, 0, 70), "green", true)
+			for i = 1, 3 do
+				self:CreateIndicator(Cheers[math.random(1, #Cheers)], self:GetPos() + Vector(0, 0, 70), Colors[math.random(1, #Colors)], true)
 			end
-			local intPostExpLevel = self:GetLevel()
-			
-			if intPreExpLevel < intPostExpLevel then
-				hook.Call("UD_Hook_PlayerLevelUp", GAMEMODE, self, intPostExpLevel - intPreExpLevel)
-				self:SetHealth(self:GetMaximumHealth())
-				self:CreateIndicator("+1_Level", self:GetPos() + Vector(0, 0, 70), "green", true)
-				for i = 1, self:GetLevel() do
-					self:CreateIndicator(Complements[math.random(1, #Complements)], self:GetPos() + Vector(0, 0, 70), Colors[math.random(1, #Colors)], true)
-				end
+			if intPostExpLevel >= GAMEMODE.MaxLevel then
+				self:CreateNotification("You have reached the highest level, " .. GAMEMODE.MaxLevel .. "!")
+			else
+				self:CreateNotification("You are now level " .. intPostExpLevel .. ". Unspent skill points: " .. self:GetNWInt("SkillPoints"))
+			end
+			if TierUnlockedBetween(intPreExpLevel, intPostExpLevel) then
+				self:CreateNotification("New skills are available to learn")
 			end
 		end
 	end
+
+	local function FindTarget(ply, strName)
+		if not strName or strName == "" then return IsValid(ply) and ply or nil end
+		strName = string.lower(strName)
+		for _, plyTarget in ipairs(player.GetAll()) do
+			if string.find(string.lower(plyTarget:Nick()), strName, 1, true) then return plyTarget end
+		end
+	end
+
+	function Player:SetLevel(intLevel)
+		intLevel = math.Clamp(math.floor(tonumber(intLevel) or 1), 1, GAMEMODE.MaxLevel)
+		local intPreLevel = self:GetLevel()
+		self:SetNWInt("exp", toExp(intLevel))
+		self:ApplyLevelGrowth(intPreLevel, intLevel)
+		self:SetNWInt("SkillPoints", self:GetDeservedSkillPoints())
+		self:SetHealth(self:GetMaximumHealth())
+		self:SaveGame()
+	end
+
+	concommand.Add("UD_Admin_GiveExp", function(ply, command, args)
+		if IsValid(ply) and not ply:IsAdmin() then return end
+		local plyTarget = FindTarget(ply, args[2])
+		if not IsValid(plyTarget) or not plyTarget.Loaded then return end
+		plyTarget:GiveExp(tonumber(args[1]) or 0, true, true)
+	end)
+
+	concommand.Add("UD_Admin_SetLevel", function(ply, command, args)
+		if IsValid(ply) and not ply:IsAdmin() then return end
+		local plyTarget = FindTarget(ply, args[2])
+		if not IsValid(plyTarget) or not plyTarget.Loaded then return end
+		plyTarget:SetLevel(args[1])
+	end)
 
 	function GM:PlayerDeath(victim, weapon, killer)
 		victim:Freeze(true)
@@ -235,15 +268,27 @@ if SERVER then
 					tblNPCTable:DamageCallBack(entAttacker, entVictim)
 				end
 			end
-			dmg:SetDamage((tblNPCTable.DamagePerLevel or 0) * entAttacker:GetNWInt("level"))
-			dmg:SetDamage(dmg:GetDamage() * (1 / (((entVictim:GetArmorRating() - 1) / 10) + 1)))
-			dmg:SetDamage(math.Clamp(math.Round(dmg:GetDamage() + math.random(-1, 1)), 0, 9999))
-			if tblNPCTable.Race == "human" then dmg:SetDamage(0) end
-			if dmg:GetDamage() > 0 then
-				entVictim:CreateIndicator(dmg:GetDamage(), dmg:GetDamagePosition(), clrDisplayColor)
+			local Damage = GAMEMODE:GetNPCHitDamage(tblNPCTable, entAttacker:GetNWInt("level"), entVictim) * math.Rand(0.9, 1.1)
+			if tblNPCTable.Race == "human" then Damage = 0 end
+			entVictim.UD_BlockedHit = nil
+			if Damage > 0 then
+				Damage = entVictim:CallSkillHook("damage_taken_mod", Damage, entAttacker) or Damage
+			end
+			Damage = math.Clamp(math.floor(Damage + 0.5), 0, 999999)
+			dmg:SetDamage(Damage)
+			if Damage > 0 then
+				entVictim.UD_LastDamaged = CurTime()
+				if entVictim.UD_Resting then entVictim:InterruptRest() end
+				entVictim:CreateIndicator(Damage, dmg:GetDamagePosition(), clrDisplayColor)
+			elseif entVictim.UD_BlockedHit then
+				entVictim:CreateIndicator("Blocked!", dmg:GetDamagePosition(), "blue")
 			else
 				entVictim:CreateIndicator("Miss!", dmg:GetDamagePosition(), "orange")
 			end
+			entVictim.UD_BlockedHit = nil
+		elseif dmg:GetDamage() > 0 and not entAttacker:IsPlayer() then
+			entVictim.UD_LastDamaged = CurTime()
+			if entVictim.UD_Resting then entVictim:InterruptRest() end
 		end
 	end
 	hook.Add("EntityTakeDamage", "PlayerAdjustDamage", PlayerAdjustDamage)

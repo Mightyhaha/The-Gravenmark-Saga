@@ -10,10 +10,11 @@ function Player:GetIdealCamPos()
 	local EditorRadiants = GAMEMODE.PaperDollEditor.CurrentCamRotation
 	local EditorDistance = GAMEMODE.PaperDollEditor.CurrentCamDistance
 	if EditorRadiants or EditorDistance then
-		Distance = Distance + (EditorDistance or 0)
-		local AddedHeight = 5
-		Position.x = Position.x + (math.cos(math.rad(EditorRadiants or 0)) * Distance)
-		Position.y = Position.y + (math.sin(math.rad(EditorRadiants or 0)) * Distance)
+		Distance = math.max(Distance + (EditorDistance or 0), 15)
+		local AddedHeight = 5 + (GAMEMODE.PaperDollEditor.CurrentCamHeight or 0)
+		local Yaw = math.rad((EditorRadiants or 0) + self:GetAngles().y)
+		Position.x = Position.x + (math.cos(Yaw) * Distance)
+		Position.y = Position.y + (math.sin(Yaw) * Distance)
 		Position.z = Position.z + AddedHeight
 	else
 		local tracedata = {}
@@ -32,7 +33,7 @@ function Player:GetIdealCamAngle()
 	if EditorRadiants or EditorDistance then
 		local OldPosition = GAMEMODE.LastLookPos or LocalPlayer():GetEyeTraceNoCursor().HitPos
 		local LookPos = LerpVector(GAMEMODE.CameraDelta * 2, OldPosition, LocalPlayer():GetEyeTraceNoCursor().HitPos)
-		LookPos = LocalPlayer():GetPos() + Vector(0, 0, 55)
+		LookPos = LocalPlayer():GetPos() + Vector(0, 0, 55 + (GAMEMODE.PaperDollEditor.CurrentCamHeight or 0))
 		local LookAng = (LookPos - LocalPlayer():GetIdealCamPos()):Angle()
 		GAMEMODE.LastLookPos = LookPos
 		return LookAng

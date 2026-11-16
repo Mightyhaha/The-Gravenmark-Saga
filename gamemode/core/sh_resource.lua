@@ -53,6 +53,21 @@ if SERVER then
 	resource.AddDir("materials/gui",   ".vtf")
 	resource.AddDir("materials/icons", ".vmt")
 	resource.AddDir("materials/icons", ".vtf")
+
+	GM.RequiredWorkshop = {
+		{ID = "908477738", Name = "Medieval playermodels - red side"},
+		{ID = "3686861961", Name = "rp_bremergard_forest"},
+		{ID = "3686864365", Name = "rp_bremergard_forest content"},
+		{ID = "1941832894", Name = "The Mercenaries (PM, Ragdoll & NPC)"},
+		{ID = "2210971880", Name = "TES Morrowind swords"},
+		{ID = "385795223", Name = "Medieval NPC Melee Weapons"},
+		{ID = "104782818", Name = "Rebellland Beta02b for Underdone", Map = "ud_rebellland_beta_02b"},
+	}
+	for _, Addon in ipairs(GM.RequiredWorkshop) do
+		if not Addon.Map or Addon.Map == game.GetMap() then
+			resource.AddWorkshop(Addon.ID)
+		end
+	end
 else
 	ForEachLuaFile(SharedFolders, include)
 	ForEachLuaFile(ClientFolders, include)

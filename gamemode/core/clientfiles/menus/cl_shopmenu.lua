@@ -46,7 +46,15 @@ function PANEL:LoadShop(Shop)
 	if ShopTable then
 		self.Frame:SetTitle(ShopTable.PrintName)
 		self.ShopInventoryPanel:Clear()
-		for Item, Info in pairs(ShopTable.Inventory or {}) do
+		local tblOrder = table.GetKeys(ShopTable.Inventory or {})
+		table.sort(tblOrder, function(A, B)
+			local tblA, tblB = ItemTable(A), ItemTable(B)
+			local intA, intB = tblA and tblA.Level or 0, tblB and tblB.Level or 0
+			if intA ~= intB then return intA < intB end
+			return A < B
+		end)
+		for _, Item in ipairs(tblOrder) do
+			local Info = ShopTable.Inventory[Item]
 			self:AddItem(self.ShopInventoryPanel, Item, 1, "buy", Info.Price or LocalPlayer():GetItemBuyPrice(Item))
 		end
 	else
@@ -74,7 +82,7 @@ function PANEL:AddItem(AddList, item, amount, Command, Cost)
 	if ItemTable then
 		local ListItems = 1
 		if not ItemTable.Stackable then ListItems = amount or 1 end
-		if Command == "sell" and table.HasValue(LocalPlayer().Data.Paperdoll or {}, item) then ListItems = ListItems - 1 end
+		if Command == "sell" and table.HasValue(LocalPlayer().Data.Paperdoll or {}, item) then ListItems = math.max(ListItems - #LocalPlayer():GetWornSlots(item), 0) end
 		if ItemTable.QuestNeeded and not LocalPlayer():HasCompletedQuest(ItemTable.QuestNeeded) then return end
 		for i = 1, ListItems do
 			local Item = vgui.Create("FIconItem")

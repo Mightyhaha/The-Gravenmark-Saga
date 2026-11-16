@@ -36,35 +36,7 @@ function PANEL:Init()
 			ReadSubMenu.Panels[#ReadSubMenu.Panels] = Panel
 			ReadSubMenu.Panels[#ReadSubMenu.Panels]:SetTooltip(Item.Desc)
 		end
-		local CraftSubMenu = GAMEMODE.ActiveMenu:AddSubMenu("Craft ...")
-		CraftSubMenu.Panels = {}	
-		for Recipe, _ in pairs(LocalPlayer().Recipes or {}) do
-			local R = RecipeTable(Recipe)
-			local Panel = CraftSubMenu:AddOption(R.PrintName, function()
-				RunConsoleCommand("UD_CraftRecipe", Recipe)
-			end)
-			CraftSubMenu.Panels[#CraftSubMenu.Panels] = Panel
-			local ToolTip = "Ingredients:"
-			for Item, Amount in pairs(R.Ingredients) do
-				ToolTip = ToolTip .. "\n" .. Amount .. " " .. ItemTable(Item).PrintName
-			end
-			ToolTip = ToolTip .. "\n\nProducts:"
-			for Item, Amount in pairs(R.Products) do
-				ToolTip = ToolTip .. "\n" .. Amount .. " " .. ItemTable(Item).PrintName
-			end
-			ToolTip = ToolTip .. "\n\nRequirements:"
-			if R.NearFire then
-				ToolTip = ToolTip .. "\nMust be done near fire"
-			end
-			for Master, Level in pairs(R.RequiredMasters) do
-				ToolTip = ToolTip .. "\n" .. Level .. " " .. MasterTable(Master).PrintName
-			end
-			CraftSubMenu.Panels[#CraftSubMenu.Panels]:SetTooltip(ToolTip)
-			if not LocalPlayer():CanMake(Recipe) then
-				CraftSubMenu.Panels[#CraftSubMenu.Panels]:SetDisabled(true)
-				CraftSubMenu.Panels[#CraftSubMenu.Panels]:SetAlpha(100)
-			end
-		end
+		GAMEMODE.ActiveMenu:AddOption("Crafting ...", function() RunConsoleCommand("UD_OpenCraftMenu") end)
 		GAMEMODE.ActiveMenu:Open()
 	end)
 
@@ -118,8 +90,13 @@ function PANEL:LoadInventory(Temp)
 
 	for name, slotTable in pairs(GAMEMODE.DataBase.Slots) do
 		if self.Paperdoll.Slots[slotTable.Name] then
-			if LocalPlayer().Data.Paperdoll[slotTable.Name] then
-				self.Paperdoll.Slots[slotTable.Name]:SetItem(GAMEMODE.DataBase.Items[LocalPlayer().Data.Paperdoll[slotTable.Name]])
+			local strWorn = LocalPlayer().Data.Paperdoll[slotTable.Name]
+			if strWorn then
+				local SlotPanel = self.Paperdoll.Slots[slotTable.Name]
+				SlotPanel:SetItem(GAMEMODE.DataBase.Items[strWorn])
+				SlotPanel.Slot = slotTable.Name
+				SlotPanel.DoUseItem = function() RunConsoleCommand("UD_UseItem", strWorn, slotTable.Name) end
+				SlotPanel:SetDoubleClick(SlotPanel.DoUseItem)
 			else
 				self.Paperdoll.Slots[slotTable.Name]:SetSlot(slotTable)
 			end
@@ -167,7 +144,7 @@ function PANEL:AddItem(item, amount)
 	local ItemTable = GAMEMODE.DataBase.Items[item]
 	local ListItems = 1
 	if not ItemTable.Stackable then ListItems = amount or 1 end
-	if table.HasValue(LocalPlayer().Data.Paperdoll or {}, item) then ListItems = ListItems - 1 end
+	if table.HasValue(LocalPlayer().Data.Paperdoll or {}, item) then ListItems = math.max(ListItems - #LocalPlayer():GetWornSlots(item), 0) end
 	for i = 1, ListItems do
 		local icnItem = vgui.Create("FIconItem")
 		icnItem:SetSize(self.ItemIconSize, self.ItemIconSize)

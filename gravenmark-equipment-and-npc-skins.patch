@@ -1,0 +1,565 @@
+From 1de144b9b6047936d036dc283fb8a368545c770b Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 16 Nov 2026 10:12:51 +0000
+Subject: [PATCH 1/2] Add necklace and two ring slots; rings fit either ring
+ slot (slot groups)
+
+---
+ README.md                                     |  6 ++
+ .../core/clientfiles/menutabs/inventory.lua   | 10 ++-
+ gamemode/core/clientfiles/vgui/FIconItem.lua  | 11 +--
+ .../commands/inventory_commands.lua           |  6 +-
+ gamemode/core/serverfiles/savingloading.lua   |  2 +-
+ .../database/items/sh_items_base.lua          | 10 +--
+ .../database/items/sh_items_jewelry.lua       | 39 +++++++++++
+ .../sharedfiles/database/items/sh_slots.lua   | 29 ++++++++
+ gamemode/core/sharedfiles/sh_inventory.lua    | 10 ++-
+ gamemode/core/sharedfiles/sh_paperdoll.lua    | 67 ++++++++++++++++++-
+ 10 files changed, 169 insertions(+), 21 deletions(-)
+ create mode 100644 gamemode/core/sharedfiles/database/items/sh_items_jewelry.lua
+
+diff --git a/README.md b/README.md
+index 9dc8969..69a11a3 100644
+--- a/README.md
++++ b/README.md
+@@ -37,6 +37,12 @@ A quest giver offers the quests listed in its `NPC.Quest = {...}`. Quest fields:
+ 
+ An item with `Item.QuestItem = "<quest name>"` only drops while the killer has that quest active.
+ 
++### Equipment slots
++
++Slots are defined in `gamemode/core/sharedfiles/database/items/sh_slots.lua`. `Position` places the slot in the paperdoll panel (percent of its width and height). A slot with `NoModel = true` gives stats only and attaches nothing to the character, like the necklace and ring slots.
++
++Slots that share a `Group` accept the same items. Rings use `Item.SlotGroup = "ring"` and fit either ring slot; a player who owns two of the same ring can wear both. Double-clicking a ring puts it in a free ring slot (or takes it off if it's worn), and dragging it onto a ring slot puts it in that one. Another slot with `Group = "ring"` adds a third ring slot without touching any items.
++
+ ## In-game editors (single player, admin)
+ 
+ | Console command | What it does |
+diff --git a/gamemode/core/clientfiles/menutabs/inventory.lua b/gamemode/core/clientfiles/menutabs/inventory.lua
+index df4cb04..1995d58 100644
+--- a/gamemode/core/clientfiles/menutabs/inventory.lua
++++ b/gamemode/core/clientfiles/menutabs/inventory.lua
+@@ -118,8 +118,14 @@ function PANEL:LoadInventory(Temp)
+ 
+ 	for name, slotTable in pairs(GAMEMODE.DataBase.Slots) do
+ 		if self.Paperdoll.Slots[slotTable.Name] then
+-			if LocalPlayer().Data.Paperdoll[slotTable.Name] then
+-				self.Paperdoll.Slots[slotTable.Name]:SetItem(GAMEMODE.DataBase.Items[LocalPlayer().Data.Paperdoll[slotTable.Name]])
++			local strWorn = LocalPlayer().Data.Paperdoll[slotTable.Name]
++			if strWorn then
++				local SlotPanel = self.Paperdoll.Slots[slotTable.Name]
++				SlotPanel:SetItem(GAMEMODE.DataBase.Items[strWorn])
++				-- Act on this exact slot, not whichever slot the item fits first.
++				SlotPanel.Slot = slotTable.Name
++				SlotPanel.DoUseItem = function() RunConsoleCommand("UD_UseItem", strWorn, slotTable.Name) end
++				SlotPanel:SetDoubleClick(SlotPanel.DoUseItem)
+ 			else
+ 				self.Paperdoll.Slots[slotTable.Name]:SetSlot(slotTable)
+ 			end
+diff --git a/gamemode/core/clientfiles/vgui/FIconItem.lua b/gamemode/core/clientfiles/vgui/FIconItem.lua
+index 51f6d18..6584066 100644
+--- a/gamemode/core/clientfiles/vgui/FIconItem.lua
++++ b/gamemode/core/clientfiles/vgui/FIconItem.lua
+@@ -221,7 +221,7 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
+ 	end
+ 	for _, Item in pairs(SetTable.Items or {}) do
+ 		local ItemTable = ItemTable(Item)
+-		local Wearing = LocalPlayer():GetSlot(ItemTable.Slot) == ItemTable.Name
++		local Wearing = LocalPlayer():IsWearing(ItemTable.Name)
+ 		if Wearing then Wearing = 1 end
+ 		if not Wearing then Wearing = 0 end
+ 		Tooltip = Format("%s\n%s/%s %s", Tooltip, tonumber(Wearing), 1, ItemTable.PrintName)
+@@ -282,10 +282,11 @@ function PANEL:SetSlot(SlotTable)
+ 	self:SetIcon(nil)
+ 	self:SetTooltip(Tooltip)
+ 	self:SetDropedOn(function()
+-		if GAMEMODE.DraggingPanel and GAMEMODE.DraggingPanel.Slot and GAMEMODE.DraggingPanel.Slot == SlotTable.Name then
+-			if GAMEMODE.DraggingPanel.Item and LocalPlayer().Data.Paperdoll[SlotTable.Name] ~= GAMEMODE.DraggingPanel.Item then
+-				GAMEMODE.DraggingPanel.DoDoubleClick()
+-			end
++		local Dragging = GAMEMODE.DraggingPanel
++		if not Dragging or not Dragging.Item or Dragging.IsPaperDollSlot then return end
++		if not SlotAcceptsItem(SlotTable.Name, ItemTable(Dragging.Item)) then return end
++		if LocalPlayer().Data.Paperdoll[SlotTable.Name] ~= Dragging.Item then
++			RunConsoleCommand("UD_UseItem", Dragging.Item, SlotTable.Name)
+ 		end
+ 	end)
+ 	self:SetDoubleClick(function() end)
+diff --git a/gamemode/core/serverfiles/commands/inventory_commands.lua b/gamemode/core/serverfiles/commands/inventory_commands.lua
+index b732edc..d46d3ea 100644
+--- a/gamemode/core/serverfiles/commands/inventory_commands.lua
++++ b/gamemode/core/serverfiles/commands/inventory_commands.lua
+@@ -1,15 +1,15 @@
+ local Player = FindMetaTable("Player")
+ 
+-function Player:UseItem(Item)
++function Player:UseItem(Item, Slot)
+ 	local ItemTable = ItemTable(Item)
+ 	if ItemTable and ItemTable.Use and self:HasItem(Item) then
+-		ItemTable:Use(self, ItemTable)
++		ItemTable:Use(self, ItemTable, Slot)
+ 		return true
+ 	end
+ 	return false
+ end
+ concommand.Add("UD_UseItem", function(ply, command, args)
+-	ply:UseItem(tostring(args[1]))
++	ply:UseItem(tostring(args[1]), args[2] and tostring(args[2]) or nil)
+ end)
+ 
+ function Player:DropItem(Item, Amount)
+diff --git a/gamemode/core/serverfiles/savingloading.lua b/gamemode/core/serverfiles/savingloading.lua
+index 0ab8d5c..9478b90 100644
+--- a/gamemode/core/serverfiles/savingloading.lua
++++ b/gamemode/core/serverfiles/savingloading.lua
+@@ -72,7 +72,7 @@ function Player:LoadGame()
+ 			self:GiveItems(savedGameData.Inventory)
+ 
+ 			for Item, Amount in pairs(savedGameData.Bank or {}) do self:AddItemToBank(Item, Amount) end
+-			for slot, item in pairs(savedGameData.Paperdoll or {}) do self:UseItem(item) end
++			for slot, item in pairs(savedGameData.Paperdoll or {}) do self:UseItem(item, slot) end
+ 			for Quest, Info in pairs(savedGameData.Quests or {}) do self:UpdateQuest(Quest, Info) end
+ 			for Book, boolRead in pairs(savedGameData.Library or {}) do self:AddBookToLibrary(Book) end
+ 			for Master, intExp in pairs(savedGameData.Masters or {}) do self:SetMaster(Master, intExp) end
+diff --git a/gamemode/core/sharedfiles/database/items/sh_items_base.lua b/gamemode/core/sharedfiles/database/items/sh_items_base.lua
+index 5eed826..56637de 100644
+--- a/gamemode/core/sharedfiles/database/items/sh_items_base.lua
++++ b/gamemode/core/sharedfiles/database/items/sh_items_base.lua
+@@ -70,10 +70,12 @@ BaseEquipment = DeriveTable(BaseItem)
+ BaseEquipment.Slot = "slot_primaryweapon"
+ BaseEquipment.Level = 1
+ BaseEquipment.Buffs = {}
+-function BaseEquipment:Use(usr, ItemTable)
++function BaseEquipment:Use(usr, ItemTable, strSlot)
+ 	if not IsValid(usr) or usr:Health() <= 0 or usr:GetLevel() < ItemTable.Level then return false end
+ 	if usr.Loaded and (usr.NextSwitch or 0) > CurTime() then return false end
+-	usr:SetPaperDoll(ItemTable.Slot, ItemTable.Name)
++	strSlot = usr:PickEquipSlot(ItemTable, strSlot)
++	if not strSlot then return false end
++	usr:SetPaperDoll(strSlot, ItemTable.Name)
+ 	usr.NextSwitch = CurTime() + 1
+ 	return true
+ end
+@@ -92,9 +94,9 @@ BaseWeapon.ClipSize = -1
+ BaseWeapon.ReloadTime = 1.5
+ BaseWeapon.Sound = "weapons/pistol/pistol_fire2.wav"
+ BaseWeapon.ReloadSound = nil
+-function BaseWeapon:Use(usr, itemtable)
++function BaseWeapon:Use(usr, itemtable, strSlot)
+ 	if not itemtable then return false end
+-	if not BaseEquipment:Use(usr, itemtable) then return false end
++	if not BaseEquipment:Use(usr, itemtable, strSlot) then return false end
+ 	usr:StripWeapons()
+ 	if usr.Data.Paperdoll[itemtable.Slot] == itemtable.Name then
+ 		usr:Give("weapon_primaryweapon")
+diff --git a/gamemode/core/sharedfiles/database/items/sh_items_jewelry.lua b/gamemode/core/sharedfiles/database/items/sh_items_jewelry.lua
+new file mode 100644
+index 0000000..e9c7c4b
+--- /dev/null
++++ b/gamemode/core/sharedfiles/database/items/sh_items_jewelry.lua
+@@ -0,0 +1,39 @@
++-- Necklaces and rings: stat bonuses only, no model on the character.
++-- Set Item.Model for a nicer dropped look; it never shows on the character.
++local function AddStats(AddTable, Slot)
++	AddTable.Slot = Slot
++	AddTable.Armor = 0
++	AddTable.Buffs = {}
++	return AddTable
++end
++-- Rings fit either ring slot (any slot with Group = "ring").
++local function AddRing(AddTable)
++	AddTable = AddStats(AddTable, "slot_ring_1")
++	AddTable.SlotGroup = "ring"
++	return AddTable
++end
++local function AddBuff(AddTable, Buff, Amount)
++	AddTable.Buffs[Buff] = Amount
++	return AddTable
++end
++
++local Item = QuickCreateItemTable(BaseArmor, "neck_iron_pendant", "Iron Pendant", "A plain pendant on a leather cord.", "icons/junk_cog")
++Item = AddStats(Item, "slot_neck")
++Item = AddBuff(Item, "stat_maxhealth", 10)
++Item.Weight = 0.1
++Item.SellPrice = 30
++Register.Item(Item)
++
++local Item = QuickCreateItemTable(BaseArmor, "ring_strength", "Band of Might", "A heavy iron band.", "icons/junk_sawblade")
++Item = AddRing(Item)
++Item = AddBuff(Item, "stat_strength", 2)
++Item.Weight = 0.1
++Item.SellPrice = 40
++Register.Item(Item)
++
++local Item = QuickCreateItemTable(BaseArmor, "ring_dexterity", "Band of Finesse", "A thin silver band.", "icons/junk_sawblade")
++Item = AddRing(Item)
++Item = AddBuff(Item, "stat_dexterity", 2)
++Item.Weight = 0.1
++Item.SellPrice = 40
++Register.Item(Item)
+diff --git a/gamemode/core/sharedfiles/database/items/sh_slots.lua b/gamemode/core/sharedfiles/database/items/sh_slots.lua
+index 4777022..1dea3cb 100644
+--- a/gamemode/core/sharedfiles/database/items/sh_slots.lua
++++ b/gamemode/core/sharedfiles/database/items/sh_slots.lua
+@@ -60,3 +60,32 @@ function SLOT:ShouldClear(ply, itm)
+ 	return true
+ end
+ Register.Slot(SLOT)
++
++-- Jewelry slots: stats only, nothing is attached to the character model.
++local SLOT = {}
++SLOT.Name = "slot_neck"
++SLOT.PrintName = "Necklace"
++SLOT.Desc = "Worn around your neck"
++SLOT.Position = Vector(25, 15, 0)
++SLOT.NoModel = true
++Register.Slot(SLOT)
++
++-- Slots with the same Group accept the same items: a ring (Item.SlotGroup = "ring")
++-- fits either ring slot. Add another slot with Group = "ring" for a third ring.
++local SLOT = {}
++SLOT.Name = "slot_ring_1"
++SLOT.PrintName = "Ring"
++SLOT.Desc = "Any ring"
++SLOT.Position = Vector(25, 65, 0)
++SLOT.Group = "ring"
++SLOT.NoModel = true
++Register.Slot(SLOT)
++
++local SLOT = {}
++SLOT.Name = "slot_ring_2"
++SLOT.PrintName = "Ring"
++SLOT.Desc = "Any ring"
++SLOT.Position = Vector(75, 65, 0)
++SLOT.Group = "ring"
++SLOT.NoModel = true
++Register.Slot(SLOT)
+diff --git a/gamemode/core/sharedfiles/sh_inventory.lua b/gamemode/core/sharedfiles/sh_inventory.lua
+index 3fbfe67..b731443 100644
+--- a/gamemode/core/sharedfiles/sh_inventory.lua
++++ b/gamemode/core/sharedfiles/sh_inventory.lua
+@@ -21,9 +21,13 @@ function Entity:AddItem(strItem, intAmount)
+ 	end
+ 	if intAmount == 0 then return false end
+ 	if SERVER then
+-		if self.Data.Paperdoll and intAmount < 0 then
+-			if self.Data.Inventory[strItem] == 1 and self.Data.Paperdoll[tblItemTable.Slot] == strItem then
+-				self:UseItem(strItem)
++		if self:IsPlayer() and self.Data.Paperdoll and intAmount < 0 then
++			-- Take off worn copies the player won't own after this.
++			local intLeft = self.Data.Inventory[strItem] + intAmount
++			local tblWorn = self:GetWornSlots(strItem)
++			for i = #tblWorn, intLeft + 1, -1 do
++				self.NextSwitch = 0 -- forced removal ignores the equip cooldown
++				self:UseItem(strItem, tblWorn[i])
+ 			end
+ 		end
+ 	end
+diff --git a/gamemode/core/sharedfiles/sh_paperdoll.lua b/gamemode/core/sharedfiles/sh_paperdoll.lua
+index f2595cb..6799259 100644
+--- a/gamemode/core/sharedfiles/sh_paperdoll.lua
++++ b/gamemode/core/sharedfiles/sh_paperdoll.lua
+@@ -10,7 +10,7 @@ end)
+ concommand.Add("udk_edit_items_clearpaperdoll", function(ply, command, args)
+ 	for strSlot, strItem in pairs(ply.Data.Paperdoll or {}) do
+ 		local tblItemTable = ItemTable(strItem)
+-		if tblItemTable.Use then tblItemTable:Use(ply, tblItemTable) end
++		if tblItemTable.Use then tblItemTable:Use(ply, tblItemTable, strSlot) end
+ 	end
+ end)
+ 
+@@ -55,7 +55,7 @@ function Player:SetPaperDoll(strSlot, strItem)
+ 		for strChkSlot, strChkItem in pairs(self.Data.Paperdoll or {}) do
+ 			local tblSlotTable = GAMEMODE.DataBase.Slots[strChkSlot]
+ 			if strChkSlot ~= strSlot and tblSlotTable.ShouldClear and tblSlotTable:ShouldClear(self, tblItemTable) then
+-				self:UseItem(strChkItem)
++				self:UseItem(strChkItem, strChkSlot)
+ 			end
+ 		end
+ 		SendNetworkMessage("UD_UpdatePaperDoll", player.GetAll(), {self, strSlot, self:GetSlot(strSlot)})
+@@ -68,6 +68,67 @@ function Player:GetSlot(strSlot)
+ 	return
+ end
+ 
++-- Slot groups: an item with SlotGroup fits every slot whose Group matches
++-- (for example two ring slots). Other items fit only their own Item.Slot.
++function GetItemSlots(tblItemTable)
++	if not tblItemTable then return {} end
++	if tblItemTable.SlotGroup then
++		local tblSlots = {}
++		for strName, tblSlot in pairs(GAMEMODE.DataBase.Slots) do
++			if tblSlot.Group == tblItemTable.SlotGroup then table.insert(tblSlots, strName) end
++		end
++		table.sort(tblSlots)
++		return tblSlots
++	end
++	return {tblItemTable.Slot}
++end
++
++function SlotAcceptsItem(strSlot, tblItemTable)
++	return table.HasValue(GetItemSlots(tblItemTable), strSlot)
++end
++
++function Player:GetWornSlots(strItem)
++	local tblWorn = {}
++	for _, strSlot in ipairs(GetItemSlots(ItemTable(strItem))) do
++		if self:GetSlot(strSlot) == strItem then table.insert(tblWorn, strSlot) end
++	end
++	return tblWorn
++end
++
++function Player:IsWearing(strItem)
++	return #self:GetWornSlots(strItem) > 0
++end
++
++-- Which slot using this item should act on, or nil if it can't be used.
++-- strSlot is set when the player picked a slot (drag and drop, paperdoll
++-- icon) or when a save is restored.
++function Player:PickEquipSlot(tblItemTable, strSlot)
++	local tblSlots = GetItemSlots(tblItemTable)
++	if #tblSlots == 0 then return nil end
++	local tblWorn = self:GetWornSlots(tblItemTable.Name)
++
++	if strSlot then
++		if not table.HasValue(tblSlots, strSlot) then return nil end
++		-- Taking it off is always fine; wearing another copy needs one more owned.
++		if self:GetSlot(strSlot) == tblItemTable.Name then return strSlot end
++		if not self:HasItem(tblItemTable.Name, #tblWorn + 1) then return nil end
++		return strSlot
++	end
++
++	if #tblSlots == 1 then return tblSlots[1] end
++
++	-- Another copy to put on and a free slot: use it.
++	if self:HasItem(tblItemTable.Name, #tblWorn + 1) then
++		for _, strFree in ipairs(tblSlots) do
++			if not self:GetSlot(strFree) then return strFree end
++		end
++	end
++	-- Already worn: take one off.
++	if #tblWorn > 0 then return tblWorn[#tblWorn] end
++	-- Every slot holds something else: replace the first.
++	return tblSlots[1]
++end
++
+ if CLIENT then
+ 	GM.PaperDollEnts = {}
+ 
+@@ -98,7 +159,7 @@ if CLIENT then
+ 		if strItem and strSlot then
+ 			local tblItemTable = ItemTable(strItem)
+ 			local tblSlotTable = SlotTable(strSlot)
+-			if tblItemTable and tblSlotTable then
++			if tblItemTable and tblSlotTable and not tblSlotTable.NoModel then
+ 				local entNewPart = GAMEMODE:BuildModel(tblItemTable.Model)
+ 				if not entNewPart then error("help") end
+ 				entNewPart:SetParent(self)
+-- 
+2.43.0
+
+
+From 26f2df2ab09295e5f5d670acbe6384d833432366 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 16 Nov 2026 09:56:35 +0000
+Subject: [PATCH 2/2] Add bonemerged NPC skins (NPC.SkinModel)
+
+---
+ README.md                                     | 15 ++++
+ gamemode/core/sharedfiles/sh_map.lua          |  3 +-
+ .../core/sharedfiles/sh_npc_bonemerge.lua     | 80 +++++++++++++++++++
+ gamemode/core/sharedfiles/sh_util.lua         | 15 ++--
+ 4 files changed, 107 insertions(+), 6 deletions(-)
+ create mode 100644 gamemode/core/sharedfiles/sh_npc_bonemerge.lua
+
+diff --git a/README.md b/README.md
+index 69a11a3..da34eda 100644
+--- a/README.md
++++ b/README.md
+@@ -42,6 +42,21 @@ An item with `Item.QuestItem = "<quest name>"` only drops while the killer has t
+ Slots are defined in `gamemode/core/sharedfiles/database/items/sh_slots.lua`. `Position` places the slot in the paperdoll panel (percent of its width and height). A slot with `NoModel = true` gives stats only and attaches nothing to the character, like the necklace and ring slots.
+ 
+ Slots that share a `Group` accept the same items. Rings use `Item.SlotGroup = "ring"` and fit either ring slot; a player who owns two of the same ring can wear both. Double-clicking a ring puts it in a free ring slot (or takes it off if it's worn), and dragging it onto a ring slot puts it in that one. Another slot with `Group = "ring"` adds a third ring slot without touching any items.
++### NPCs wearing other models (bonemerge)
++
++Workshop playermodels have no NPC animations, so setting one as an NPC's `Model` makes it T-pose or slide. Instead, give the NPC a `SkinModel`:
++
++```lua
++local NPC = QuickNPC("guard_red", "Red Guard", "npc_combine_s", "human", 400)
++NPC.SkinModel = "models/path/to/playermodel.mdl"
++```
++
++The base NPC still does the AI and animation but is hidden, and the `SkinModel` is attached to its skeleton (`EF_BONEMERGE`), so it follows every animation. Notes:
++
++- Only works on human NPC classes with the standard skeleton (`npc_citizen`, `npc_combine_s`, `npc_metropolice`, `npc_breen`, `npc_eli`, `npc_kleiner`), not zombies, antlions or vortigaunts.
++- `NPC.Color` tints the worn model; freeze and burn effects do too.
++- The base NPC's ragdoll is removed on death, since it would show the wrong model.
++- If the model isn't mounted (the Workshop addon is missing), the NPC spawns with its normal look and a warning is printed in the server console.
+ 
+ ## In-game editors (single player, admin)
+ 
+diff --git a/gamemode/core/sharedfiles/sh_map.lua b/gamemode/core/sharedfiles/sh_map.lua
+index aa75d80..8171260 100644
+--- a/gamemode/core/sharedfiles/sh_map.lua
++++ b/gamemode/core/sharedfiles/sh_map.lua
+@@ -222,7 +222,7 @@ if SERVER then
+ 		if tblNPCTable.Model then
+ 			entNewMonster:SetModel(tblNPCTable.Model)
+ 		end
+-		if tblNPCTable.Color then
++		if tblNPCTable.Color and not tblNPCTable.SkinModel then
+ 			local r = tblNPCTable.Color[1]
+ 			local g = tblNPCTable.Color[2]
+ 			local b = tblNPCTable.Color[3]
+@@ -230,6 +230,7 @@ if SERVER then
+ 			entNewMonster:SetColor(Color(r,g,b,a))
+ 		end
+ 		entNewMonster:Spawn()
++		GAMEMODE:ApplyNPCSkin(entNewMonster, tblNPCTable)
+ 		if tblNPCTable.DeathDistance then
+ 			for _, ent in pairs(ents.FindInSphere( tblSpawnPoint.Position, tblNPCTable.DeathDistance )) do
+ 				if IsValid(ent) and ent:IsPlayer() then
+diff --git a/gamemode/core/sharedfiles/sh_npc_bonemerge.lua b/gamemode/core/sharedfiles/sh_npc_bonemerge.lua
+new file mode 100644
+index 0000000..28c46ce
+--- /dev/null
++++ b/gamemode/core/sharedfiles/sh_npc_bonemerge.lua
+@@ -0,0 +1,80 @@
++-- Bonemerged NPC skins
++--
++-- Lets a human NPC wear a model that has no NPC animations of its own, such as
++-- a Workshop playermodel. The real NPC (npc_citizen, npc_combine_s, npc_eli...)
++-- still does the AI and animation but is made invisible, and the model in
++-- NPC.SkinModel is attached to its skeleton with EF_BONEMERGE so it follows
++-- every animation.
++--
++-- Usage, in an NPC definition:
++--   NPC.SkinModel = "models/path/to/playermodel.mdl"
++--
++-- Only works on NPC classes with the standard human (ValveBiped) skeleton.
++-- If the model isn't mounted (Workshop addon missing), the NPC spawns with
++-- its normal look instead of turning into an ERROR model.
++
++if SERVER then
++	local function HideBaseNPC(entNPC)
++		entNPC:SetRenderMode(RENDERMODE_TRANSCOLOR)
++		entNPC:SetColor(Color(255, 255, 255, 0))
++	end
++
++	-- Called from GM:CreateNPC after the NPC has spawned.
++	function GM:ApplyNPCSkin(entNPC, tblNPCTable)
++		local strModel = tblNPCTable.SkinModel
++		if not strModel or not IsValid(entNPC) then return end
++
++		if not util.IsValidModel(strModel) then
++			print("[Gravenmark] SkinModel for NPC '" .. tostring(tblNPCTable.Name) .. "' is not mounted: " .. strModel)
++			return
++		end
++
++		local entSkin = ents.Create("prop_dynamic")
++		if not IsValid(entSkin) then return end
++
++		entSkin:SetModel(strModel)
++		entSkin:SetPos(entNPC:GetPos())
++		entSkin:SetAngles(entNPC:GetAngles())
++		entSkin:SetKeyValue("solid", "0")
++		entSkin:SetParent(entNPC)
++		entSkin:AddEffects(EF_BONEMERGE)
++		entSkin:Spawn()
++
++		-- Must not block bullets or traces, or hits would land on the prop
++		-- instead of the NPC's hitboxes.
++		entSkin:SetNotSolid(true)
++		entSkin:SetCollisionGroup(COLLISION_GROUP_IN_VEHICLE)
++		entSkin:DrawShadow(false)
++
++		-- NPC.Color tints the worn model rather than the hidden NPC.
++		if tblNPCTable.Color then
++			local c = tblNPCTable.Color
++			entSkin:SetColor(Color(c[1] or 255, c[2] or 255, c[3] or 255, c[4] or 255))
++		end
++
++		HideBaseNPC(entNPC)
++		entNPC:DeleteOnRemove(entSkin)
++		entNPC.UD_Skin = entSkin
++		entNPC:SetNWBool("UD_Skinned", true)
++	end
++
++	-- Status effects (freeze, burn) tint the visible model, not the hidden NPC.
++	function GetTintTarget(ent)
++		if IsValid(ent.UD_Skin) then return ent.UD_Skin end
++		return ent
++	end
++
++	-- The base NPC's own ragdoll would be the wrong model, so drop it.
++	hook.Add("CreateEntityRagdoll", "UD_SkinnedNPCRagdoll", function(entOwner, entRagdoll)
++		if IsValid(entOwner) and entOwner:GetNWBool("UD_Skinned") then
++			entRagdoll:Remove()
++		end
++	end)
++else
++	hook.Add("CreateClientsideRagdoll", "UD_SkinnedNPCRagdoll", function(entOwner, entRagdoll)
++		if IsValid(entOwner) and entOwner:GetNWBool("UD_Skinned") then
++			entRagdoll:SetNoDraw(true)
++			SafeRemoveEntityDelayed(entRagdoll, 0)
++		end
++	end)
++end
+diff --git a/gamemode/core/sharedfiles/sh_util.lua b/gamemode/core/sharedfiles/sh_util.lua
+index 1c6f0d7..6cb7a9c 100644
+--- a/gamemode/core/sharedfiles/sh_util.lua
++++ b/gamemode/core/sharedfiles/sh_util.lua
+@@ -148,9 +148,14 @@ if SERVER then
+ 		return WorldProp
+ 	end
+ 
++	-- Bonemerged NPCs (sh_npc_bonemerge.lua) are tinted through their worn model.
++	local function TintTarget(ent)
++		return GetTintTarget and GetTintTarget(ent) or ent
++	end
++
+ 	local function RestoreStatusColor(ent)
+ 		if not ent.UD_BeingSlowed and not ent.UD_BeingBurned and ent.UD_originalColor then
+-			ent:SetColor(ent.UD_originalColor)
++			TintTarget(ent):SetColor(ent.UD_originalColor)
+ 			ent.UD_originalColor = nil
+ 		end
+ 	end
+@@ -165,7 +170,7 @@ if SERVER then
+ 		local TotalTime = 0
+ 		local SlowRate = 0.1
+ 		local TimerName = "UD_Stun" .. self:EntIndex()
+-		self.UD_originalColor = self.UD_originalColor or self:GetColor()
++		self.UD_originalColor = self.UD_originalColor or TintTarget(self):GetColor()
+ 
+ 		timer.Create(TimerName, SlowRate, 0, function()
+ 			if not IsValid(self) then timer.Remove(TimerName) return end
+@@ -181,7 +186,7 @@ if SERVER then
+ 			end
+ 		end)
+ 
+-		self:SetColor(Color(200, 200, 255, 255))
++		TintTarget(self):SetColor(Color(200, 200, 255, 255))
+ 		self.UD_BeingSlowed = true
+ 	end
+ 
+@@ -196,7 +201,7 @@ if SERVER then
+ 		local IgnitedRate = 0.35
+ 		local TimerName = "UD_Burn" .. self:EntIndex()
+ 
+-		self.UD_originalColor = self.UD_originalColor or self:GetColor()
++		self.UD_originalColor = self.UD_originalColor or TintTarget(self):GetColor()
+ 		self:Ignite(Time, 0)
+ 
+ 		timer.Create(TimerName, IgnitedRate, 0, function()
+@@ -217,7 +222,7 @@ if SERVER then
+ 				timer.Remove(TimerName)
+ 			end
+ 		end)
+-		self:SetColor(Color(200, 0, 0, 255))
++		TintTarget(self):SetColor(Color(200, 0, 0, 255))
+ 		self.UD_BeingBurned = true
+ 	end
+ 
+-- 
+2.43.0
+

@@ -212,15 +212,21 @@ function GM:DrawHealthBar()
 end
 
 function GM:DrawLevelBar()
-	local playerlevel = tonumber(LocalPlayer():GetLevel()) or 0
-	local CurrentLevelExp = toExp(playerlevel)
-	local NextLevelExp = toExp(playerlevel + 1)
+	local playerlevel = tonumber(LocalPlayer():GetLevel()) or 1
 	local BarColor = Orange
 	self.LevelBar = jdraw.NewProgressBar(self.PlayerBox, true)
 	self.LevelBar:SetDimensions(3, self.HealthBar.Size.Height + 6, self.PlayerBox.Size.Width - 6, 15)
 	self.LevelBar:SetStyle(4, BarColor)
-	self.LevelBar:SetValue(LocalPlayer():GetNWInt("exp") - CurrentLevelExp, NextLevelExp - CurrentLevelExp)
-	self.LevelBar:SetText("UiBold", "Level " .. LocalPlayer():GetLevel(), DrakGray)
+	if playerlevel >= GAMEMODE.MaxLevel then
+		self.LevelBar:SetValue(1, 1)
+		self.LevelBar:SetText("UiBold", "Level " .. playerlevel .. " (max)", DrakGray)
+	else
+		local CurrentLevelExp = toExp(playerlevel)
+		local Needed = ExpToNextLevel(playerlevel)
+		local Progress = math.Clamp(LocalPlayer():GetNWInt("exp") - CurrentLevelExp, 0, Needed)
+		self.LevelBar:SetValue(Progress, Needed)
+		self.LevelBar:SetText("UiBold", "Level " .. playerlevel .. "  " .. Progress .. " / " .. Needed, DrakGray)
+	end
 	jdraw.DrawProgressBar(self.LevelBar)
 end
 

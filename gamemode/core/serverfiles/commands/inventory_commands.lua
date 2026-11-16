@@ -1,15 +1,15 @@
 local Player = FindMetaTable("Player")
 
-function Player:UseItem(Item)
+function Player:UseItem(Item, Slot)
 	local ItemTable = ItemTable(Item)
 	if ItemTable and ItemTable.Use and self:HasItem(Item) then
-		ItemTable:Use(self, ItemTable)
+		ItemTable:Use(self, ItemTable, Slot)
 		return true
 	end
 	return false
 end
 concommand.Add("UD_UseItem", function(ply, command, args)
-	ply:UseItem(tostring(args[1]))
+	ply:UseItem(tostring(args[1]), args[2] and tostring(args[2]) or nil)
 end)
 
 function Player:DropItem(Item, Amount)

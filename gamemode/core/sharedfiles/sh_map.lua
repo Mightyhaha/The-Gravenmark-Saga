@@ -1,6 +1,7 @@
 GM.MapEntities = {}
 GM.MapEntities.NPCSpawnPoints = {}
 GM.MapEntities.WorldProps = {}
+GM.MapEntities.PlayerSpawns = {}
 
 if SERVER then
 	local DefaultPropModel = "models/props_junk/wood_crate001a.mdl"
@@ -135,6 +136,51 @@ if SERVER then
 		if ply then SendNetworkMessage("UD_RemoveWorldProp", ply, {intKey}) end
 	end
 
+	local function SendPlayerSpawn(intKey)
+		local ply = EditorPlayer()
+		local Spawn = GAMEMODE.MapEntities.PlayerSpawns[intKey]
+		if not ply or not Spawn then return end
+		SendNetworkMessage("UD_UpdatePlayerSpawn", ply, {intKey, Spawn.Position, Spawn.Angle})
+	end
+
+	function GM:CreatePlayerSpawn(vecPosition, angAngle)
+		table.insert(GAMEMODE.MapEntities.PlayerSpawns, {Position = vecPosition, Angle = angAngle or Angle(0, 0, 0)})
+		SendPlayerSpawn(#GAMEMODE.MapEntities.PlayerSpawns)
+	end
+
+	function GM:UpdatePlayerSpawn(intKey, vecPosition, angAngle)
+		local Spawn = GAMEMODE.MapEntities.PlayerSpawns[intKey]
+		if not Spawn then return end
+		Spawn.Position = vecPosition or Spawn.Position
+		Spawn.Angle = angAngle or Spawn.Angle
+		SendPlayerSpawn(intKey)
+	end
+
+	function GM:RemovePlayerSpawn(intKey)
+		if not GAMEMODE.MapEntities.PlayerSpawns[intKey] then return end
+		table.remove(GAMEMODE.MapEntities.PlayerSpawns, intKey)
+		local ply = EditorPlayer()
+		if ply then SendNetworkMessage("UD_RemovePlayerSpawn", ply, {intKey}) end
+	end
+
+	function GM:PickPlayerSpawn()
+		local tblSpawns = GAMEMODE.MapEntities.PlayerSpawns
+		if #tblSpawns == 0 then return end
+		local tblFree = {}
+		for _, Spawn in ipairs(tblSpawns) do
+			local boolBlocked = false
+			for _, ent in ipairs(ents.FindInSphere(Spawn.Position, 40)) do
+				if ent:IsPlayer() and ent:Alive() then
+					boolBlocked = true
+					break
+				end
+			end
+			if not boolBlocked then table.insert(tblFree, Spawn) end
+		end
+		if #tblFree == 0 then tblFree = tblSpawns end
+		return tblFree[math.random(#tblFree)]
+	end
+
 	function GM:LoadMapObjects()
 		local strFileName = GAMEMODE.DataFolder .. "/Maps/" .. game.GetMap() .. ".txt"
 		if not file.Exists(strFileName, "DATA") then return end
@@ -149,12 +195,18 @@ if SERVER then
 		for k, WorldProp in ipairs(tblDecodedTable.WorldProps or {}) do
 			timer.Simple(0.05 * k, function() GAMEMODE:CreateWorldProp(WorldProp.Model, WorldProp.Position, WorldProp.Angle, nil, true) end)
 		end
+		for _, PlayerSpawn in ipairs(tblDecodedTable.PlayerSpawns or {}) do
+			GAMEMODE:CreatePlayerSpawn(PlayerSpawn.Position, PlayerSpawn.Angle)
+		end
 	end
 	hook.Add("Initialize", "LoadMapObjects", function() GAMEMODE:LoadMapObjects() end)
 
 	function GM:SaveMapObjects()
 		local strFileName = GAMEMODE.DataFolder .. "/Maps/" .. game.GetMap() .. ".txt"
-		local tblSaveTable = {NPCSpawnPoints = {}, WorldProps = {}}
+		local tblSaveTable = {NPCSpawnPoints = {}, WorldProps = {}, PlayerSpawns = {}}
+		for _, Spawn in ipairs(GAMEMODE.MapEntities.PlayerSpawns) do
+			table.insert(tblSaveTable.PlayerSpawns, {Position = Spawn.Position, Angle = Spawn.Angle})
+		end
 		for _, Spawn in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
 			table.insert(tblSaveTable.NPCSpawnPoints, {Position = Spawn.Position, Angle = Spawn.Angle, NPC = Spawn.NPC, Level = Spawn.Level, SpawnTime = Spawn.SpawnTime, Radius = Spawn.Radius, Count = Spawn.Count})
 		end
@@ -211,8 +263,10 @@ if SERVER then
 		entNewMonster:SetAngles(tblSpawnPoint.Angle or Angle(0, 90, 0))
 		entNewMonster:SetKeyValue("spawnflags","512")
 		entNewMonster:DrawShadow(false)
+		for strKey, strValue in pairs(tblNPCTable.KeyValues or {}) do
+			entNewMonster:SetKeyValue(strKey, tostring(strValue))
+		end
 		if tblNPCTable.Weapon then
-			entNewMonster:Give(tblNPCTable.Weapon)
 			entNewMonster:SetKeyValue("additionalequipment", tblNPCTable.Weapon)
 			entNewMonster:SetKeyValue("spawnflags","8192")
 		end
@@ -230,6 +284,8 @@ if SERVER then
 			entNewMonster:SetColor(Color(r,g,b,a))
 		end
 		entNewMonster:Spawn()
+		GAMEMODE:ApplyNPCSkin(entNewMonster, tblNPCTable)
+		GAMEMODE:ApplyNPCHeldItems(entNewMonster, tblNPCTable)
 		if tblNPCTable.DeathDistance then
 			for _, ent in pairs(ents.FindInSphere( tblSpawnPoint.Position, tblNPCTable.DeathDistance )) do
 				if IsValid(ent) and ent:IsPlayer() then
@@ -270,28 +326,46 @@ if SERVER then
 		entNewMonster:SetNWInt("MaxHealth", intHealth)
 		entNewMonster:SetHealth(intHealth)
 		entNewMonster:SetNWInt("Health", intHealth)
-		for _, ent in pairs(ents.GetAll()) do
-			if ent and ent:IsValid() and (ent:IsNPC() or ent:IsPlayer()) and ent.Race and tblNPCTable.Race then
-				if ent.Race == tblNPCTable.Race then
-					entNewMonster:AddEntityRelationship(ent, GAMEMODE.RelationLike, 99)
-					if ent:IsNPC() then ent:AddEntityRelationship(entNewMonster, GAMEMODE.RelationLike, 99) end
-				else
-					if not ent.Invincible then entNewMonster:AddEntityRelationship(ent, GAMEMODE.RelationHate, 99) end
-					if not entNewMonster.Invincible and ent:IsNPC() then ent:AddEntityRelationship(entNewMonster, GAMEMODE.RelationHate, 99)  end
-					if ent:IsPlayer() and not GAMEMODE.EventHasStarted and intLevel < ent:GetLevel() then
-						entNewMonster:AddEntityRelationship(ent, GAMEMODE.RelationNeutral, 99)
-					end
-				end
-			end
-		end
+		timer.Simple(1, function()
+			if not IsValid(entNewMonster) or entNewMonster.LastPlayerAttacker then return end
+			if entNewMonster:Health() == intHealth and entNewMonster:GetMaxHealth() == intHealth then return end
+			entNewMonster:SetMaxHealth(intHealth)
+			entNewMonster:SetHealth(intHealth)
+			entNewMonster:SetNWInt("Health", intHealth)
+		end)
+		for _, ent in ipairs(player.GetAll()) do GAMEMODE:SetNPCRelationship(entNewMonster, ent) end
+		for _, ent in ipairs(ents.FindByClass("npc_*")) do GAMEMODE:SetNPCRelationship(entNewMonster, ent) end
 		entNewMonster:Activate()
 		return entNewMonster
 	end
+
+	function GM:SetNPCRelationship(entNPC, ent)
+		if not IsValid(entNPC) or not IsValid(ent) or entNPC == ent then return end
+		if not entNPC:IsNPC() or not entNPC.Race or not ent.Race then return end
+		if not ent:IsNPC() and not ent:IsPlayer() then return end
+		if ent.Race == entNPC.Race then
+			entNPC:AddEntityRelationship(ent, GAMEMODE.RelationLike, 99)
+			if ent:IsNPC() then ent:AddEntityRelationship(entNPC, GAMEMODE.RelationLike, 99) end
+		else
+			if not ent.Invincible then entNPC:AddEntityRelationship(ent, GAMEMODE.RelationHate, 99) end
+			if not entNPC.Invincible and ent:IsNPC() then ent:AddEntityRelationship(entNPC, GAMEMODE.RelationHate, 99) end
+			if ent:IsPlayer() and not GAMEMODE.EventHasStarted and entNPC:GetNWInt("level") < ent:GetLevel() then
+				entNPC:AddEntityRelationship(ent, GAMEMODE.RelationNeutral, 99)
+			end
+		end
+	end
+
+	hook.Add("UD_Hook_PlayerLoad", "UD_NPCRelationships", function(ply)
+		for _, entNPC in ipairs(ents.FindByClass("npc_*")) do
+			GAMEMODE:SetNPCRelationship(entNPC, ply)
+		end
+	end)
 
 	if game.SinglePlayer() then
 		hook.Add("UD_Hook_PlayerLoad", "UD_SendMapEditorData", function(ply)
 			for intKey in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do SendSpawnPoint(intKey) end
 			for intKey in ipairs(GAMEMODE.MapEntities.WorldProps) do SendWorldProp(intKey) end
+			for intKey in ipairs(GAMEMODE.MapEntities.PlayerSpawns) do SendPlayerSpawn(intKey) end
 		end)
 
 		local function IsEditor(ply)
@@ -369,6 +443,30 @@ if SERVER then
 			GAMEMODE:RemoveWorldProp(tonumber(args[1]))
 		end)
 
+		concommand.Add("UD_Dev_EditMap_AddPlayerSpawn", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			local Position = VectorFromArgs(args, 1)
+			if not Position then return end
+			GAMEMODE:CreatePlayerSpawn(Position, YawAngle(args[4]))
+		end)
+
+		concommand.Add("UD_Dev_EditMap_UpdatePlayerSpawn", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			GAMEMODE:UpdatePlayerSpawn(tonumber(args[1]), nil, YawAngle(args[2]))
+		end)
+
+		concommand.Add("UD_Dev_EditMap_MovePlayerSpawn", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			local Position = VectorFromArgs(args, 2)
+			if not Position then return end
+			GAMEMODE:UpdatePlayerSpawn(tonumber(args[1]), Position)
+		end)
+
+		concommand.Add("UD_Dev_EditMap_RemovePlayerSpawn", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			GAMEMODE:RemovePlayerSpawn(tonumber(args[1]))
+		end)
+
 		concommand.Add("UD_Dev_EditMap_SaveMap", function(ply, command, args)
 			if not IsEditor(ply) then return end
 			GAMEMODE:SaveMapObjects()
@@ -407,6 +505,19 @@ if CLIENT then
 
 	net.Receive("UD_RemoveWorldProp", function()
 		table.remove(GAMEMODE.MapEntities.WorldProps, net.ReadDouble())
+		hook.Run("UD_MapObjectsChanged")
+	end)
+
+	net.Receive("UD_UpdatePlayerSpawn", function()
+		local intKey = net.ReadDouble()
+		local Position = net.ReadVector()
+		local Ang = net.ReadAngle()
+		GAMEMODE.MapEntities.PlayerSpawns[intKey] = {Position = Position, Angle = Ang}
+		hook.Run("UD_MapObjectsChanged")
+	end)
+
+	net.Receive("UD_RemovePlayerSpawn", function()
+		table.remove(GAMEMODE.MapEntities.PlayerSpawns, net.ReadDouble())
 		hook.Run("UD_MapObjectsChanged")
 	end)
 end

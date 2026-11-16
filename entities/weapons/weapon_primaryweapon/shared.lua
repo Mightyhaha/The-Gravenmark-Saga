@@ -87,7 +87,7 @@ function SWEP:WeaponAttack()
 	if self.WeaponTable then
 		local intRange = self:GetOwner():GetEyeTrace().HitPos:Distance(self:GetOwner():GetEyeTrace().StartPos)
 		local intMaxRange = 4000
-		if isMelee then intMaxRange = 70 end
+		if isMelee then intMaxRange = self.WeaponTable.Range or 70 end
 		local tblBullet = {}
 		tblBullet.Src     = self:GetOwner():GetShootPos()
 		tblBullet.Dir     = self:GetOwner():GetAimVector()

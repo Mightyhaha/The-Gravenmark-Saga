@@ -6,7 +6,9 @@ function Player:NewGame()
 	self:AddItem("money", 100)
 	self:AddItem("item_smallammo_small", 3)
 	self:AddItem("item_healthkit", 2)
-	self:AddItem("weapon_melee_axe", 1)
+	self:AddItem("weapon_melee_rustysword", 1)
+	self:AddItem("item_bedroll", 1)
+	self:AddItem("food_ryebread", 3)
 	self:AddItem("weapon_ranged_junkpistol", 1)
 	--[[
 	self:AddItem("item_canspoilingmeat", 1)
@@ -51,18 +53,24 @@ function Player:LoadGame()
 		end
 
 		if savedGameData then
-			self:SetNWInt("exp", savedGameData.Exp or 0)
+			local intExp = tonumber(savedGameData.Exp) or 0
+			if (tonumber(savedGameData.ExpCurve) or 1) < GAMEMODE.ExpCurveVersion then
+				intExp = LegacyExpToExp(intExp)
+			end
+			self:SetNWInt("exp", math.Clamp(intExp, 0, toExp(GAMEMODE.MaxLevel)))
+			self:ApplyLevelGrowth(1, self:GetLevel())
 			self:SetNWInt("SkillPoints", self:GetDeservedSkillPoints())
 
 			if savedGameData.Skills then
-				local AllSkillsTable = table.Copy(GAMEMODE.DataBase.Skills)
-				AllSkillsTable = table.ClearKeys(AllSkillsTable)
-				table.sort(AllSkillsTable, function(statA, statB) return statA.Tier < statB.Tier end)
+				local AllSkillsTable = table.ClearKeys(table.Copy(GAMEMODE.DataBase.Skills))
+				table.sort(AllSkillsTable, function(SkillA, SkillB)
+					if SkillA.Tier ~= SkillB.Tier then return SkillA.Tier < SkillB.Tier end
+					return SkillA.Name < SkillB.Name
+				end)
 
-				for _, Skill in pairs(AllSkillsTable or {}) do
-					if self:CanHaveSkill(Skill.Name) and savedGameData.Skills[Skill.Name] then
-						self:BuySkill(Skill.Name, savedGameData.Skills[Skill.Name])
-					end
+				for _, Skill in ipairs(AllSkillsTable) do
+					local intRank = tonumber(savedGameData.Skills[Skill.Name]) or 0
+					if intRank > 0 then self:BuySkill(Skill.Name, intRank, true) end
 				end
 			end
 
@@ -72,7 +80,7 @@ function Player:LoadGame()
 			self:GiveItems(savedGameData.Inventory)
 
 			for Item, Amount in pairs(savedGameData.Bank or {}) do self:AddItemToBank(Item, Amount) end
-			for slot, item in pairs(savedGameData.Paperdoll or {}) do self:UseItem(item) end
+			for slot, item in pairs(savedGameData.Paperdoll or {}) do self:UseItem(item, slot) end
 			for Quest, Info in pairs(savedGameData.Quests or {}) do self:UpdateQuest(Quest, Info) end
 			for Book, boolRead in pairs(savedGameData.Library or {}) do self:AddBookToLibrary(Book) end
 			for Master, intExp in pairs(savedGameData.Masters or {}) do self:SetMaster(Master, intExp) end
@@ -80,6 +88,7 @@ function Player:LoadGame()
 			self:NewGame()
 		end
 	end
+	self:SetNWInt("SkillPoints", self:GetDeservedSkillPoints())
 
 	-- Finish loading
 	self.Loaded = true
@@ -140,6 +149,7 @@ function Player:SaveGameNow(SubFolder)
 
 	if self:SteamID() ~= "STEAM_ID_PENDING" then
 		SaveTable.Exp = self:GetNWInt("exp")
+		SaveTable.ExpCurve = GAMEMODE.ExpCurveVersion
 		file.Write(self:GetSaveFileName(SubFolder), util.Compress(util.TableToJSON(SaveTable)))
 	end
 	if not SubFolder then self.UD_NeedsSave = false end

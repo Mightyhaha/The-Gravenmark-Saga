@@ -70,10 +70,12 @@ BaseEquipment = DeriveTable(BaseItem)
 BaseEquipment.Slot = "slot_primaryweapon"
 BaseEquipment.Level = 1
 BaseEquipment.Buffs = {}
-function BaseEquipment:Use(usr, ItemTable)
+function BaseEquipment:Use(usr, ItemTable, strSlot)
 	if not IsValid(usr) or usr:Health() <= 0 or usr:GetLevel() < ItemTable.Level then return false end
 	if usr.Loaded and (usr.NextSwitch or 0) > CurTime() then return false end
-	usr:SetPaperDoll(ItemTable.Slot, ItemTable.Name)
+	strSlot = usr:PickEquipSlot(ItemTable, strSlot)
+	if not strSlot then return false end
+	usr:SetPaperDoll(strSlot, ItemTable.Name)
 	usr.NextSwitch = CurTime() + 1
 	return true
 end
@@ -92,9 +94,9 @@ BaseWeapon.ClipSize = -1
 BaseWeapon.ReloadTime = 1.5
 BaseWeapon.Sound = "weapons/pistol/pistol_fire2.wav"
 BaseWeapon.ReloadSound = nil
-function BaseWeapon:Use(usr, itemtable)
+function BaseWeapon:Use(usr, itemtable, strSlot)
 	if not itemtable then return false end
-	if not BaseEquipment:Use(usr, itemtable) then return false end
+	if not BaseEquipment:Use(usr, itemtable, strSlot) then return false end
 	usr:StripWeapons()
 	if usr.Data.Paperdoll[itemtable.Slot] == itemtable.Name then
 		usr:Give("weapon_primaryweapon")

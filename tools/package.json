@@ -1,0 +1,11 @@
+{
+  "name": "gravenmark-tools",
+  "private": true,
+  "description": "Syntax check for the gamemode's Garry's Mod Lua files",
+  "scripts": {
+    "check": "node check_glua.js"
+  },
+  "devDependencies": {
+    "luaparse": "0.3.1"
+  }
+}

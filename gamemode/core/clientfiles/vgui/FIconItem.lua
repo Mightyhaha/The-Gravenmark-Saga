@@ -208,6 +208,9 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 	if ItemTable.NumOfBullets and ItemTable.NumOfBullets > 1 then Tooltip = Format("%sx%s", Tooltip, ItemTable.NumOfBullets) end
 	if ItemTable.FireRate then Tooltip = Format("%s (%s)", Tooltip, ItemTable.Power * ItemTable.NumOfBullets * ItemTable.FireRate) end
 	if ItemTable.FireRate then Tooltip = Format("%s\nSpeed: %s", Tooltip, ItemTable.FireRate) end
+	if ItemTable.WeaponClass and GAMEMODE.WeaponClasses[ItemTable.WeaponClass] then Tooltip = Format("%s\nType: %s", Tooltip, GAMEMODE.WeaponClasses[ItemTable.WeaponClass].PrintName) end
+	if ItemTable.CritBonus then Tooltip = Format("%s\n+%s%% critical chance", Tooltip, math.Round(ItemTable.CritBonus * 100)) end
+	if ItemTable.Range then Tooltip = Format("%s\nLong reach", Tooltip) end
 	if ItemTable.ClipSize and ItemTable.ClipSize >= 0 then Tooltip = Format("%s\nClipsize: %s", Tooltip, ItemTable.ClipSize) end
 	if ItemTable.Slot and ItemTable.Slot ~= "slot_primaryweapon" then Tooltip = Format("%s\nSlot: %s", Tooltip, SlotTable(ItemTable.Slot).PrintName) end
 	if ItemTable.Armor then Tooltip = Format("%s\nArmor: %s", Tooltip, ItemTable.Armor) end
@@ -220,11 +223,11 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 		Tooltip = Format("%s\n\nSet: %s", Tooltip, SetTable.PrintName)
 	end
 	for _, Item in pairs(SetTable.Items or {}) do
-		local ItemTable = ItemTable(Item)
-		local Wearing = LocalPlayer():GetSlot(ItemTable.Slot) == ItemTable.Name
-		if Wearing then Wearing = 1 end
-		if not Wearing then Wearing = 0 end
-		Tooltip = Format("%s\n%s/%s %s", Tooltip, tonumber(Wearing), 1, ItemTable.PrintName)
+		local SetItemTable = GAMEMODE.DataBase.Items[Item]
+		if SetItemTable then
+			local Wearing = LocalPlayer():IsWearing(Item) and 1 or 0
+			Tooltip = Format("%s\n%s/%s %s", Tooltip, Wearing, 1, SetItemTable.PrintName or Item)
+		end
 	end
 	for Stat, Amount in pairs(SetTable.Buffs or {}) do
 		local StatTable = StatTable(Stat)
@@ -282,10 +285,11 @@ function PANEL:SetSlot(SlotTable)
 	self:SetIcon(nil)
 	self:SetTooltip(Tooltip)
 	self:SetDropedOn(function()
-		if GAMEMODE.DraggingPanel and GAMEMODE.DraggingPanel.Slot and GAMEMODE.DraggingPanel.Slot == SlotTable.Name then
-			if GAMEMODE.DraggingPanel.Item and LocalPlayer().Data.Paperdoll[SlotTable.Name] ~= GAMEMODE.DraggingPanel.Item then
-				GAMEMODE.DraggingPanel.DoDoubleClick()
-			end
+		local Dragging = GAMEMODE.DraggingPanel
+		if not Dragging or not Dragging.Item or Dragging.IsPaperDollSlot then return end
+		if not SlotAcceptsItem(SlotTable.Name, ItemTable(Dragging.Item)) then return end
+		if LocalPlayer().Data.Paperdoll[SlotTable.Name] ~= Dragging.Item then
+			RunConsoleCommand("UD_UseItem", Dragging.Item, SlotTable.Name)
 		end
 	end)
 	self:SetDoubleClick(function() end)

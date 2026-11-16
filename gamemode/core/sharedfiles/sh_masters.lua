@@ -67,7 +67,7 @@ if SERVER then
 	function Player:BuyMasterLevel(MasterName)
 		if not IsValid(self) or not self.Data.Masters then return false end
 		if self:GetMasterExp(MasterName) == self:GetMasterExpNextLevel(MasterName) - 1 then
-			if self:GetTotalMasters() < GAMEMODE.MaxMaxtersTiers then
+			if self:GetTotalMasters() < GAMEMODE.MaxMaxtersTiers and self:GetMasterLevel(MasterName) < GAMEMODE.Combat.MaxTradeTier then
 				self:SetMaster(MasterName, self:GetMasterExpNextLevel(MasterName))
 			end
 		end

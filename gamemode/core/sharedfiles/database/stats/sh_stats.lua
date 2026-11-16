@@ -34,7 +34,7 @@ function Stat:OnSet(ply, Strength, OldStrength)
 end
 function Stat:DamageMod(ply, Strength, Damage)
 	if ply:IsMelee() then
-		Damage = Damage * math.max(Strength / 3, 1)
+		Damage = Damage * GAMEMODE:GetStatDamageMultiplier(Strength)
 	end
 	return Damage
 end
@@ -47,7 +47,7 @@ Stat.Desc = "The more you have, the more damage your ranged attacks will do."
 Stat.Default = 1
 function Stat:DamageMod(ply, Dexterity, Damage)
 	if not ply:IsMelee() then
-		Damage = Damage * math.max(Dexterity / 3, 1)
+		Damage = Damage * GAMEMODE:GetStatDamageMultiplier(Dexterity)
 	end
 	return Damage
 end
@@ -66,13 +66,11 @@ Stat.PrintName = "Agility"
 Stat.Desc = "The higher this is, the faster you run, reload and attack."
 Stat.Default = 1
 function Stat:OnSet(ply, Agility, OldAgility)
-	ply:AddMoveSpeed((Agility - OldAgility) * 10)
+	ply:AddMoveSpeed((Agility - OldAgility) * GAMEMODE.Combat.AgilityMoveSpeed)
 end
 function Stat:FireRateMod(ply, Agility, FireRate)
 	if not FireRate then return end
-	
-	FireRate = FireRate * math.max(Agility / 5, 1)
-	return FireRate
+	return FireRate * (1 + (math.max(Agility, 1) - 1) / GAMEMODE.Combat.AgilityFireRateDivisor)
 end
 Register.Stat(Stat)
 

@@ -9,8 +9,9 @@ function PANEL:Init()
 	self.Frame = CreateGenericFrame("Quest Menu", false, true)
 	self.Frame.InternalClose = self.Frame.Close
 	self.Frame.Close = function()
-		GAMEMODE.QuestMenu.Frame:InternalClose()
-		GAMEMODE.QuestMenu = nil
+		self.Frame:InternalClose()
+		if GAMEMODE.QuestMenu == self then GAMEMODE.QuestMenu = nil end
+		self:Remove()
 	end
 	self.Frame:MakePopup()
 
@@ -21,9 +22,15 @@ function PANEL:Init()
 	self:PerformLayout()
 end
 
-function PANEL:LoadQuests(Quests)
+local function TurnInName(QuestTable)
+	local NPCTable = QuestTable.TurnInNPC and NPCTable(QuestTable.TurnInNPC)
+	return NPCTable and NPCTable.PrintName or QuestTable.TurnInNPC
+end
+
+function PANEL:LoadQuests(Quests, NPCName)
 	Quests = self.QuestTable or Quests
 	self.QuestTable = Quests
+	self.NPCName = self.NPCName or NPCName
 	self.QuestList:Clear()
 	for _, quest in pairs(Quests) do
 		local QuestTable = QuestTable(quest)
@@ -40,6 +47,9 @@ function PANEL:LoadQuests(Quests)
 				if LocalPlayer():GetQuest(quest) then
 					if LocalPlayer():GetQuest(quest).Done then
 						questbutton:SetDescText("Completed")
+					elseif QuestTable.TurnInNPC and QuestTable.TurnInNPC ~= self.NPCName then
+						local TurnInButton = questbutton:AddButton("gui/arrow_in", "Turn in to " .. TurnInName(QuestTable), function() end)
+						TurnInButton:SetAlpha(100)
 					else
 						if LocalPlayer():CanTurnInQuest(quest) then
 							questbutton:AddButton("gui/arrow_in", "Turn in quest", function()
@@ -85,6 +95,11 @@ function PANEL:SellectQuest(Quest)
 		if PlayerQuestTable.Done or ItemsGot >= Amount then Text = Text .. " (Done)" end
 		self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, Text, White))
 	end
+	if quest.TurnInNPC then
+		local Text = "Speak to " .. TurnInName(quest)
+		if PlayerQuestTable.Done then Text = Text .. " (Done)" end
+		self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, Text, White))
+	end
 	self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, "Rewards:", White))
 	if (quest.GainedExp or 0) > 0 then
 		self.QuestDescription:AddItem(CreateGenericLabel(nil, nil, quest.GainedExp .. " Exp", White))
@@ -122,8 +137,16 @@ vgui.Register("questmenu", PANEL, "Panel")
 concommand.Add("UD_OpenQuestMenu", function(ply, command, args)
 	local npctab = NPCTable(args[1])
 	if not npctab or not npctab.Quest then return end
-	GAMEMODE.QuestMenu = GAMEMODE.QuestMenu or vgui.Create("questmenu")
+	local Quests = table.Copy(npctab.Quest)
+	for Quest, Info in pairs(LocalPlayer().Data and LocalPlayer().Data.Quests or {}) do
+		local QuestTable = QuestTable(Quest)
+		if QuestTable and QuestTable.TurnInNPC == args[1] and not Info.Done and not table.HasValue(Quests, Quest) then
+			table.insert(Quests, 1, Quest)
+		end
+	end
+	if IsValid(GAMEMODE.QuestMenu) then GAMEMODE.QuestMenu.Frame:Close() end
+	GAMEMODE.QuestMenu = vgui.Create("questmenu")
 	GAMEMODE.QuestMenu:SetSize(525, 320)
 	GAMEMODE.QuestMenu:Center()
-	GAMEMODE.QuestMenu:LoadQuests(npctab.Quest)
+	GAMEMODE.QuestMenu:LoadQuests(Quests, args[1])
 end)

@@ -1,31 +1,33 @@
 PANEL = {}
 PANEL.HeaderHieght = 15
-PANEL.ItemIconPadding = 1
-PANEL.ItemIconSize = 39
+PANEL.StatsWidth = 190
+
+local StatRows = {
+	{Stat = "stat_maxhealth", Label = "Max Health"},
+	{Stat = "stat_strength", Label = "Strength"},
+	{Stat = "stat_dexterity", Label = "Dexterity"},
+	{Stat = "stat_agility", Label = "Agility"},
+	{Stat = "stat_luck", Label = "Luck"},
+	{Stat = "stat_maxweight", Label = "Max Weight"},
+}
 
 function PANEL:Init()
 	self.HeaderList = CreateGenericList(self, 1, true, false)
-	self.SkillsList = CreateGenericList(self, self.ItemIconPadding, true, true)
-	self.SkillsList.Tiers = {}
+	self.StatsList = CreateGenericList(self, 2, false, true)
 	self.MastersHeader = CreateGenericList(self, 1, true, false)
 	self.MastersList = CreateGenericList(self, 2, false, false)
-	self:LoadSkills()
+	self:LoadHeader()
 	self:LoadMasters()
 end
 
 function PANEL:PerformLayout()
 	self.HeaderList:SetPos(0, 0)
-	self.HeaderList:SetSize(59 + (self.ItemIconSize * 6), self.HeaderHieght)
-	self.SkillsList:SetPos(0, self.HeaderHieght + 5)
-	self.SkillsList:SetSize(self.HeaderList:GetWide(), self:GetTall() - self.HeaderHieght - 5)
-	for Tier, TierPanel in pairs(self.SkillsList.Tiers or {}) do
-		TierPanel:SetSize(self.SkillsList:GetWide() - (self.ItemIconPadding * 2), self.ItemIconSize + (self.ItemIconPadding * 2))
-		TierPanel.TierList:SetSize(TierPanel:GetWide() - 50, TierPanel:GetTall())
-		TierPanel.TierList:SetPos(TierPanel:GetWide() - TierPanel.TierList:GetWide(), 0)
-	end
-	self.MastersHeader:SetPos(self.HeaderList:GetWide() + 5, 0)
-	self.MastersHeader:SetSize(self:GetWide() - self.HeaderList:GetWide() - 5, self.HeaderHieght)
-	self.MastersList:SetPos(self.HeaderList:GetWide() + 5, self.HeaderHieght + 5)
+	self.HeaderList:SetSize(self.StatsWidth, self.HeaderHieght)
+	self.StatsList:SetPos(0, self.HeaderHieght + 5)
+	self.StatsList:SetSize(self.StatsWidth, self:GetTall() - self.HeaderHieght - 5)
+	self.MastersHeader:SetPos(self.StatsWidth + 5, 0)
+	self.MastersHeader:SetSize(self:GetWide() - self.StatsWidth - 5, self.HeaderHieght)
+	self.MastersList:SetPos(self.StatsWidth + 5, self.HeaderHieght + 5)
 	self.MastersList:SetSize(self.MastersHeader:GetWide(), self:GetTall() - self.HeaderHieght - 5)
 	for Master, MasterBar in pairs(self.MastersList.Masters or {}) do
 		if MasterBar.TierUp then
@@ -35,54 +37,36 @@ function PANEL:PerformLayout()
 end
 
 function PANEL:LoadSkills()
-	self.SkillsList:Clear()
-	self.SkillsList.Tiers = {}
-	local AddTable = table.Copy(GAMEMODE.DataBase.Skills)
-	AddTable = table.ClearKeys(AddTable)
-	table.sort(AddTable, function(statA, statB) return statA.Tier < statB.Tier end)
-	for _, SkillTable in pairs(AddTable) do
-		local ExistingTierList = self.SkillsList.Tiers[SkillTable.Tier]
-		if ExistingTierList then
-			self:AddSkill(ExistingTierList, SkillTable.Name, SkillTable)
-		else
-			self:CreateNewTierList(self.SkillsList, SkillTable.SkillNeeded, SkillTable.Tier)
-			self:AddSkill(self.SkillsList.Tiers[SkillTable.Tier], SkillTable.Name, SkillTable)
-		end
+	if GAMEMODE.MainMenu and GAMEMODE.MainMenu.SkillsTab then GAMEMODE.MainMenu.SkillsTab:Refresh() end
+end
+
+local function AddStatLabel(List, Text)
+	local Label = vgui.Create("DLabel")
+	Label:SetFont("UiBold")
+	Label:SetColor(clrDrakGray)
+	Label:SetText("  " .. Text)
+	Label:SizeToContents()
+	List:AddItem(Label)
+end
+
+function PANEL:LoadHeader()
+	local ply = LocalPlayer()
+	if not IsValid(ply) or not ply.GetStat then return end
+	self.HeaderList:Clear()
+	AddStatLabel(self.HeaderList, "Level " .. ply:GetLevel())
+	self.StatsList:Clear()
+	for _, Row in ipairs(StatRows) do
+		if StatTable(Row.Stat) then AddStatLabel(self.StatsList, Row.Label .. ": " .. ply:GetStat(Row.Stat)) end
 	end
-	--Since when did NWvars get slow :/
-	timer.Simple(0.2, function() self:LoadHeader() end)
+	AddStatLabel(self.StatsList, "Armor: " .. ((ply:GetArmorRating() or 1) - 1))
+	if ply:GetLevel() < GAMEMODE.MaxLevel then
+		local intProgress = ply:GetNWInt("exp") - toExp(ply:GetLevel())
+		AddStatLabel(self.StatsList, "Experience: " .. intProgress .. " / " .. ExpToNextLevel(ply:GetLevel()))
+	else
+		AddStatLabel(self.StatsList, "Experience: max level")
+	end
+	AddStatLabel(self.StatsList, "Skill points: " .. ply:GetNWInt("SkillPoints"))
 	self:PerformLayout()
-end
-
-function PANEL:CreateNewTierList(Parent, SkillNeeded, Tier)
-	local NewTierPanel = vgui.Create("DPanel")
-	NewTierPanel.Paint = function() end
-	NewTierPanel.TierList = CreateGenericList(NewTierPanel, 1, true, false)
-	NewTierPanel.TierList.Paint = function() end
-	local TierText = vgui.Create("DLabel", NewTierPanel)
-	TierText:SetFont("UiBold")
-	TierText:SetColor(clrDrakGray)
-	TierText:SetText("Tier " .. Tier .. "\nlv. " .. ((Tier - 1) * 5) .. "+")
-	TierText:SizeToContents()
-	TierText:SetPos(7, 8)
-	if LocalPlayer():GetLevel() < ((Tier - 1) * 5) then
-		NewTierPanel:SetAlpha(100)
-	end
-	Parent:AddItem(NewTierPanel)
-	Parent.Tiers[Tier] = NewTierPanel
-end
-
-function PANEL:AddSkill(Parent, Skill, SkillTable)
-	local SkillAmount = LocalPlayer():GetSkill(Skill)
-	local Skill = vgui.Create("FIconItem")
-	local SkillNeeded = SkillTable.SkillNeeded
-	if SkillNeeded and LocalPlayer():GetSkill(SkillNeeded) == 0 then
-		Skill:SetAlpha(100)
-	end
-	Skill:SetSize(self.ItemIconSize, self.ItemIconSize)
-	Skill:SetSkill(SkillTable, SkillAmount)
-	Parent.TierList:AddItem(Skill)
-	return Skill
 end
 
 function PANEL:LoadMasters()
@@ -98,7 +82,7 @@ function PANEL:LoadMasters()
 		MasterBar:SetValue(CurentExp)
 		MasterBar:SetText(MasterTable.PrintName .. " Tier " .. CurentLevel)
 		if LocalPlayer():GetMasterExp(Name) == LocalPlayer():GetMasterExpNextLevel(Name) - 1 then
-			if LocalPlayer():GetTotalMasters() < GAMEMODE.MaxMaxtersTiers then
+			if LocalPlayer():GetTotalMasters() < GAMEMODE.MaxMaxtersTiers and CurentLevel < GAMEMODE.Combat.MaxTradeTier then
 				MasterBar.TierUp = CreateGenericImageButton(MasterBar, "gui/arrow_up", "Tier Up", function()
 					RunConsoleCommand("UD_BuyMasterLevel", Name)
 				end)
@@ -118,15 +102,5 @@ function PANEL:LoadMasters()
 	Total:SizeToContents()
 	self.MastersHeader:AddItem(Total)
 	self:PerformLayout()
-end
-
-function PANEL:LoadHeader()
-	self.HeaderList:Clear()
-	local SkillPoints = vgui.Create("DLabel")
-	SkillPoints:SetFont("UiBold")
-	SkillPoints:SetColor(clrDrakGray)
-	SkillPoints:SetText("  Skill Points " .. LocalPlayer():GetNWInt("SkillPoints"))
-	SkillPoints:SizeToContents()
-	self.HeaderList:AddItem(SkillPoints)
 end
 vgui.Register("charactertab", PANEL, "Panel")

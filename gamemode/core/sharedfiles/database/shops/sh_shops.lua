@@ -28,11 +28,6 @@ Shop.Name = "shop_books"
 Shop.PrintName = "Book Store"
 Shop.Inventory = {}
 Shop.Inventory["book_of_beginning"] = {}
-Shop.Inventory["book_homemadeboom"] = {}
-Shop.Inventory["book_canofmeat"] = {}
-Shop.Inventory["book_chinesebox"] = {}
-Shop.Inventory["book_cooknoodles"] = {}
-Shop.Inventory["book_wooddistilation"] = {}
 Shop.Inventory["book_polkmstail_ep1"] = {}
 Register.Shop(Shop)
 
@@ -40,43 +35,27 @@ local Shop = {}
 Shop.Name = "shop_armor"
 Shop.PrintName = "Armor Store"
 Shop.Inventory = {}
-Shop.Inventory["armor_shoulder_combine"] = {}
-Shop.Inventory["armor_sheild_cog"] = {}
-Shop.Inventory["armor_sheild_saw"] = {}
-Shop.Inventory["armor_helm_gasmask"] = {}
-Shop.Inventory["armor_helm_chefshat"] = {}
-Shop.Inventory["armor_helm_junkhelmet"] = {}
-Shop.Inventory["armor_helm_scannergoggles"] = {}
-Shop.Inventory["armor_chest_junkarmor"] = {}
-Shop.Inventory["armor_belt_leather"] = {}
+for strName, Item in pairs(GM.DataBase.Items) do
+	if Item.Crafted and Item.Slot and Item.Slot ~= "slot_primaryweapon" and Item.Slot ~= "slot_ring_1" then Shop.Inventory[strName] = {} end
+end
 Register.Shop(Shop)
-
 
 local Shop = {}
 Shop.Name = "shop_melee"
 Shop.PrintName = "Blacksmith"
 Shop.Inventory = {}
-Shop.Inventory["weapon_melee_cleaver"] = {}
-Shop.Inventory["weapon_melee_skullmace"] = {}
-Shop.Inventory["weapon_melee_leadpipe"] = {}
-Shop.Inventory["weapon_melee_fryingpan"] = {}
-Shop.Inventory["weapon_melee_emptool"] = {}
-Shop.Inventory["weapon_melee_knife"] = {}
-Shop.Inventory["weapon_melee_harpoon"] = {}
-Shop.Inventory["weapon_melee_circularsaw"] = {}
-Shop.Inventory["weapon_melee_anttalon"] = {}
-Shop.Inventory["weapon_melee_claw"] = {}
-Shop.Inventory["weapon_melee_antlionclaw"] = {}
-Shop.Inventory["weapon_melee_dualaxe"] = {}
-Shop.Inventory["weapon_melee_powerhammer"] = {}
-Shop.Inventory["weapon_melee_hammer"] = {}
-Shop.Inventory["weapon_melee_woodboard"] = {}
-Shop.Inventory["weapon_melee_pickaxe"] = {}
-Shop.Inventory["weapon_melee_reaper"] = {}
-Shop.Inventory["weapon_melee_harpoon2"] = {}
-Shop.Inventory["weapon_melee_anttalon"] = {}
-Shop.Inventory["weapon_melee_skele"] = {}
-Shop.Inventory["weapon_melee_tyrant"] = {}
+for strName, Item in pairs(GM.DataBase.Items) do
+	if Item.Crafted and Item.Slot == "slot_primaryweapon" then Shop.Inventory[strName] = {} end
+end
+Register.Shop(Shop)
+
+local Shop = {}
+Shop.Name = "shop_craftsupplies"
+Shop.PrintName = "Smith's Supplies"
+Shop.Inventory = {}
+for strName, Item in pairs(GM.DataBase.Items) do
+	if Item.CraftMaterial then Shop.Inventory[strName] = {} end
+end
 Register.Shop(Shop)
 
 local Shop = {}
