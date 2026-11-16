@@ -46,8 +46,8 @@ An item with `Item.QuestItem = "<quest name>"` only drops while the killer has t
 
 Using the map editor:
 
-- You can move and look around freely while it is open. Hold **C** to get a mouse cursor for the editor window or for clicking in the world.
-- **Left-click** the ground (with the crosshair, or with the cursor while holding C) to place a marker, then pick its settings and press **Add**. Nothing spawns until you add it.
+- It opens with the mouse cursor on. Press **C** to switch between using the cursor (window and clicking in the world) and looking around with the mouse. WASD moves you either way. `UD_Dev_EditMap_Mouse` does the same as C.
+- **Left-click** the ground (with the cursor, or with the crosshair while the cursor is off) to place a marker, then pick its settings and press **Add**. Nothing spawns until you add it.
 - **Left-click** an existing marker to select it: change its settings and press **Apply changes**, **Move** it to your next click, or **Remove** it.
 - **Right-click** cancels or deselects. Your weapon does not fire while the editor is open.
 - A spawn point spawns **How many NPCs** at once, randomly inside its **Spawn area radius** (0 means exactly on the marker). Each one respawns its own **Respawn** seconds after dying.

@@ -78,7 +78,8 @@ local function StatusText()
 	end
 	local Counts = #GAMEMODE.MapEntities.NPCSpawnPoints .. " spawn points, " .. #GAMEMODE.MapEntities.WorldProps .. " props"
 	if Editor.Dirty then Counts = Counts .. "  -  unsaved changes" end
-	return Status .. "\n" .. Counts
+	local Mouse = Editor.CursorEnabled and "Mouse: ON (press C to look around)" or "Mouse: OFF (press C to use this window)"
+	return Status .. "\n" .. Counts .. "\n" .. Mouse
 end
 
 local function UpdateStatus()
@@ -268,7 +269,7 @@ Rebuild = function()
 	local Body = Editor.Body
 	Body:Clear()
 	if not Editor.Pending and not Editor.SelectedKey then
-		AddLabel(Body, "Left-click: place a new marker, or select an existing one.\nRight-click: cancel or deselect.\nHold C: use the mouse on this window, or click in the world with it.\nRun UD_Dev_EditMap again to close the editor.\nPress Save map when you are done.")
+		AddLabel(Body, "Left-click: place a new marker, or select an existing one.\nRight-click: cancel or deselect.\nC: switch between using the mouse here and looking around.\nWASD still moves you while the mouse is on.\nRun UD_Dev_EditMap again to close the editor.\nPress Save map when you are done.")
 		return
 	end
 	if Editor.Mode == "npc" then
@@ -343,17 +344,16 @@ function Editor.Open()
 		return
 	end
 
-	local Frame = CreateGenericFrame("Map Editor  (hold C for the mouse)", true, true)
+	local Frame = CreateGenericFrame("Map Editor  (C toggles the mouse)", true, true)
 	Frame:SetSize(310, 500)
 	Frame:SetPos(20, 80)
-	Frame:SetMouseInputEnabled(false)
-	Frame:SetKeyboardInputEnabled(false)
 	Frame.OnClose = function()
 		Editor.Frame = nil
 		Editor.Pending = nil
 		Editor.SelectedKey = nil
 		Editor.Edit = nil
 		Editor.Moving = false
+		Editor.CursorEnabled = false
 	end
 	Editor.Frame = Frame
 
@@ -391,9 +391,34 @@ function Editor.Open()
 	Editor.Body = vgui.Create("DScrollPanel", Frame)
 	Editor.Body:Dock(FILL)
 
+	Editor.SetCursor(true)
 	Rebuild()
 end
 concommand.Add("UD_Dev_EditMap", function() Editor.Open() end)
+
+function Editor.SetCursor(Enabled)
+	local Frame = Editor.Frame
+	if not IsValid(Frame) then return end
+	Editor.CursorEnabled = Enabled
+	if Enabled then
+		Frame:MakePopup()
+		Frame:SetKeyboardInputEnabled(false)
+		Frame:SetMouseInputEnabled(true)
+	else
+		Frame:SetMouseInputEnabled(false)
+		Frame:SetKeyboardInputEnabled(false)
+	end
+	UpdateStatus()
+end
+concommand.Add("UD_Dev_EditMap_Mouse", function() Editor.SetCursor(not Editor.CursorEnabled) end)
+
+hook.Add("OnTextEntryGetFocus", "UD_MapEditorTyping", function(Panel)
+	if IsValid(Editor.Frame) and Panel:HasParent(Editor.Frame) then Editor.Frame:SetKeyboardInputEnabled(true) end
+end)
+
+hook.Add("OnTextEntryLoseFocus", "UD_MapEditorTyping", function(Panel)
+	if IsValid(Editor.Frame) and Panel:HasParent(Editor.Frame) then Editor.Frame:SetKeyboardInputEnabled(false) end
+end)
 
 hook.Add("UD_MapObjectsChanged", "UD_MapEditorSync", function()
 	if not IsValid(Editor.Frame) then return end
@@ -415,6 +440,10 @@ end)
 
 hook.Add("PlayerBindPress", "UD_MapEditorClick", function(ply, Bind, Pressed)
 	if not IsValid(Editor.Frame) or not Pressed then return end
+	if string.find(Bind, "+menu_context", 1, true) then
+		Editor.SetCursor(not Editor.CursorEnabled)
+		return true
+	end
 	if string.find(Bind, "+attack2", 1, true) then
 		Cancel()
 		return true
@@ -422,31 +451,6 @@ hook.Add("PlayerBindPress", "UD_MapEditorClick", function(ply, Bind, Pressed)
 	if string.find(Bind, "+attack", 1, true) then
 		HandleWorldClick(LocalPlayer():GetEyeTraceNoCursor())
 		return true
-	end
-end)
-
-local function IsCursorKeyDown()
-	local KeyName = input.LookupBinding("+menu_context") or "c"
-	local KeyCode = input.GetKeyCode(KeyName)
-	return KeyCode and KeyCode > 0 and input.IsKeyDown(KeyCode)
-end
-
-local function IsTypingInFrame(Frame)
-	local Focus = vgui.GetKeyboardFocus()
-	return IsValid(Focus) and Focus ~= Frame and Focus:HasParent(Frame)
-end
-
-hook.Add("Think", "UD_MapEditorCursor", function()
-	local Frame = Editor.Frame
-	if not IsValid(Frame) then return end
-	local WantsCursor = IsCursorKeyDown() or IsTypingInFrame(Frame)
-	if WantsCursor == Frame.UD_HasCursor then return end
-	Frame.UD_HasCursor = WantsCursor
-	if WantsCursor then
-		Frame:MakePopup()
-	else
-		Frame:SetMouseInputEnabled(false)
-		Frame:SetKeyboardInputEnabled(false)
 	end
 end)
 
