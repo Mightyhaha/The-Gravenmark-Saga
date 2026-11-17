@@ -19,17 +19,6 @@ Item = AddModel(Item, "models/weapons/w_defuser.mdl", Vector(-3.9, -0.3, -14.2),
 Item = AddStats(Item, "slot_waist", 0)
 Register.Item(Item)
 
-local Item = QuickCreateItemTable(BaseArmor, "armor_waist_jetpack", "Jetpack", "Just for show!", "icons/hat_cheifshat")
-Item = AddModel(Item, "models/props_combine/breenlight.mdl", Vector(7.7, -4.3, -2.1), Angle(-15.4, -177.3, 0.7))
-Item = AddModel(Item, "models/props_combine/breenlight.mdl", Vector(-0.3, 7.7, -0.1), Angle(-4.7, -4.7, -0.7))
-Item = AddModel(Item, "models/props_combine/combine_emitter01.mdl", Vector(4.3, -4.3, -3.9), Angle(-94.3, 180, -2))
-Item = AddStats(Item, "slot_waist", 1)
-Item = AddBuff(Item, "stat_strength", 3)
-Item = AddBuff(Item, "stat_agility", 5)
-Item.Weight = 2
-Item.SellPrice = 300
-Register.Item(Item)
-
 local Item = QuickCreateItemTable(BaseArmor, "armor_belt_leather", "Leather Belt", "4str 4stam leather belt? UGH Level 14? UGHHUGH", "icons/item_cash")
 Item = AddModel(Item, "models/props_c17/pulleywheels_large01.mdl", Vector(1.22, 0, -0.98), Angle(0, 90, 0), nil, nil, Vector(0.4, 0.37, 0.32))--Waist
 Item = AddModel(Item, "models/props_vehicles/apc_tire001.mdl", Vector(6.34, 0, 0), Angle(-90, 0, 0), nil, nil, Vector(0.1, 0.1, 0.1))--Buckle
@@ -39,26 +28,6 @@ Item = AddBuff(Item, "stat_maxhealth", 4)
 Item.Level = 14
 Item.Weight = 1
 Item.SellPrice = 1444
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseArmor, "armor_belt_cyborg", "Biomechanical Spine", "Resistance is Futile.", "icons/item_cash")
-Item = AddModel(Item, "models/Gibs/manhack_gib02.mdl", Vector(-4.39, -4.88, -1.46), Angle(0, -90, 52.68), nil, nil, Vector(1, 1, 1))--left
-Item = AddStats(Item, "slot_waist", 5)
-Item = AddBuff(Item, "stat_dexterity", 3)
-Item.Level = 20
-Item.Weight = 1
-Item.SellPrice = 5205
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseArmor, "armor_belt_car", "Steering belt", "Steer me in the right direction", "icons/item_cash")
-Item = AddModel(Item, "models/props_borealis/door_wheel001a.mdl", Vector(4.88, 0, 0), Angle(-90, 79.02, 0), nil, nil, Vector(0.7, 0.7, 0.7))--left
-Item = AddStats(Item, "slot_waist", 13)
-Item = AddBuff(Item, "stat_dexterity", 1)
-Item = AddBuff(Item, "stat_strength", 1)
-Item = AddBuff(Item, "stat_maxhealth", 5)
-Item.Level = 1
-Item.Weight = 1
-Item.SellPrice = 1
 Register.Item(Item)
 
 
@@ -82,16 +51,6 @@ Item = AddBuff(Item, "stat_strength", 15)
 Item.Level = 32
 Item.Weight = 2
 Item.SellPrice = 12456
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseArmor, "armor_belt_bio", "Gutguard of the Overseer", "Created from light and durable metal, increases ranged combat.", "icons/item_cash")
-Item = AddModel(Item, "models/Gibs/manhack_gib02.mdl", Vector(-4.39, -4.88, -1.46), Angle(0, -90, 52.68), nil, nil, Vector(1, 1, 1))--left
-Item = AddStats(Item, "slot_waist", 15)
-Item = AddBuff(Item, "stat_dexterity", 5)
-Item = AddBuff(Item, "stat_maxhealth", 10)
-Item.Level = 42
-Item.Weight = 1
-Item.SellPrice = 22467
 Register.Item(Item)
 
 local Item = QuickCreateItemTable(BaseArmor, "armor_belt_tyrant", "Gutguard of the Tyrant", "Made from the finest materials, for protection.", "icons/item_cash")

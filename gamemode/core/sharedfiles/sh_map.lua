@@ -2,6 +2,7 @@ GM.MapEntities = {}
 GM.MapEntities.NPCSpawnPoints = {}
 GM.MapEntities.WorldProps = {}
 GM.MapEntities.PlayerSpawns = {}
+GM.MapEntities.OreVeins = {}
 
 if SERVER then
 	local DefaultPropModel = "models/props_junk/wood_crate001a.mdl"
@@ -87,7 +88,7 @@ if SERVER then
 		tblNewObject.SpawnProp = function()
 			local intKey = table.KeyFromValue(GAMEMODE.MapEntities.WorldProps, tblNewObject)
 			if not intKey then return end
-			local entNewProp = ents.Create(GetPropClass(tblNewObject.Model))
+			local entNewProp = ents.Create(GetPropClass(GAMEMODE:ResolvePropModel(tblNewObject.Model)))
 			tblNewObject.Entity = entNewProp
 			GAMEMODE:UpdateWorldProp(intKey, tblNewObject.Model, tblNewObject.Position, tblNewObject.Angle, nil, boolLoad)
 			entNewProp:SetSkin(math.random(0, entNewProp:SkinCount()))
@@ -108,7 +109,7 @@ if SERVER then
 		local entProp = Prop.Entity
 		if IsValid(entProp) then
 			local strPreModel = entProp:GetModel()
-			entProp:SetModel(Prop.Model or DefaultPropModel)
+			entProp:SetModel(GAMEMODE:ResolvePropModel(Prop.Model or DefaultPropModel))
 			entProp:SetPos(Prop.Position or entProp:GetPos())
 			entProp:SetAngles(Prop.Angle or entProp:GetAngles())
 			if (boolFlush or strPreModel ~= entProp:GetModel()) and not boolLoad then
@@ -119,7 +120,8 @@ if SERVER then
 			entProp:DrawShadow(false)
 			entProp:SetKeyValue("spawnflags", 8)
 			entProp.ObjectKey = intKey
-			Prop.Model = entProp:GetModel()
+			GAMEMODE:ApplyStationBuild(entProp, Prop.Model)
+			if not GAMEMODE:GetStationBuild(Prop.Model) then Prop.Model = entProp:GetModel() end
 			Prop.Position = entProp:GetPos()
 			Prop.Angle = entProp:GetAngles()
 		end
@@ -163,6 +165,82 @@ if SERVER then
 		if ply then SendNetworkMessage("UD_RemovePlayerSpawn", ply, {intKey}) end
 	end
 
+	local function SendOreVein(intKey)
+		local ply = EditorPlayer()
+		local Vein = GAMEMODE.MapEntities.OreVeins[intKey]
+		if not ply or not Vein then return end
+		SendNetworkMessage("UD_UpdateOreVein", ply, {intKey, Vein.Position, Vein.Angle, Vein.Ore, Vein.SpawnTime, Vein.Model})
+	end
+
+	local function SpawnOreVeinEntity(intKey)
+		local Vein = GAMEMODE.MapEntities.OreVeins[intKey]
+		if not Vein then return end
+		if IsValid(Vein.Entity) then Vein.Entity:Remove() end
+		local entVein = ents.Create("prop_physics")
+		if not IsValid(entVein) then return end
+		entVein:SetModel(Vein.Model)
+		local vecMins, vecMaxs = entVein:GetModelBounds()
+		entVein:SetPos(Vein.Position - Vector(0, 0, vecMins.z + (vecMaxs.z - vecMins.z) * GAMEMODE.OreVeinSink))
+		entVein:SetAngles(Vein.Angle)
+		entVein:Spawn()
+		entVein:PhysicsInit(SOLID_VPHYSICS)
+		entVein:SetMoveType(MOVETYPE_NONE)
+		local physVein = entVein:GetPhysicsObject()
+		if IsValid(physVein) then physVein:EnableMotion(false) end
+		entVein:DrawShadow(false)
+		local Ore = GAMEMODE:GetOreType(Vein.Ore)
+		if Ore then entVein:SetColor(Ore.Tint) end
+		entVein:SetNWString("UD_Ore", Vein.Ore)
+		entVein.UD_OreVeinKey = intKey
+		Vein.Entity = entVein
+	end
+
+	local function ReindexOreVeins()
+		for intKey, Vein in ipairs(GAMEMODE.MapEntities.OreVeins) do
+			if IsValid(Vein.Entity) then Vein.Entity.UD_OreVeinKey = intKey end
+		end
+	end
+
+	function GM:CreateOreVein(vecPosition, angAngle, strOre, intSpawnTime, strModel, boolLoad)
+		if not GAMEMODE:GetOreType(strOre) then return end
+		local Vein = {Position = vecPosition, Angle = angAngle or Angle(0, 0, 0), Ore = strOre, SpawnTime = intSpawnTime or GAMEMODE.OreVeinRespawn}
+		Vein.Model = util.IsValidModel(strModel or "") and strModel or GAMEMODE:DefaultOreVeinModel()
+		table.insert(GAMEMODE.MapEntities.OreVeins, Vein)
+		local intKey = #GAMEMODE.MapEntities.OreVeins
+		if boolLoad then
+			timer.Simple(1 + 0.05 * intKey, function()
+				for intNow, Other in ipairs(GAMEMODE.MapEntities.OreVeins) do
+					if Other == Vein then SpawnOreVeinEntity(intNow) end
+				end
+			end)
+		else
+			SpawnOreVeinEntity(intKey)
+		end
+		SendOreVein(intKey)
+	end
+
+	function GM:UpdateOreVein(intKey, vecPosition, angAngle, strOre, intSpawnTime, strModel)
+		local Vein = GAMEMODE.MapEntities.OreVeins[intKey]
+		if not Vein then return end
+		Vein.Position = vecPosition or Vein.Position
+		Vein.Angle = angAngle or Vein.Angle
+		if GAMEMODE:GetOreType(strOre) then Vein.Ore = strOre end
+		if GAMEMODE:IsOreVeinModel(strModel) then Vein.Model = strModel end
+		Vein.SpawnTime = intSpawnTime or Vein.SpawnTime
+		SpawnOreVeinEntity(intKey)
+		SendOreVein(intKey)
+	end
+
+	function GM:RemoveOreVein(intKey)
+		local Vein = GAMEMODE.MapEntities.OreVeins[intKey]
+		if not Vein then return end
+		if IsValid(Vein.Entity) then Vein.Entity:Remove() end
+		table.remove(GAMEMODE.MapEntities.OreVeins, intKey)
+		ReindexOreVeins()
+		local ply = EditorPlayer()
+		if ply then SendNetworkMessage("UD_RemoveOreVein", ply, {intKey}) end
+	end
+
 	function GM:PickPlayerSpawn()
 		local tblSpawns = GAMEMODE.MapEntities.PlayerSpawns
 		if #tblSpawns == 0 then return end
@@ -198,12 +276,18 @@ if SERVER then
 		for _, PlayerSpawn in ipairs(tblDecodedTable.PlayerSpawns or {}) do
 			GAMEMODE:CreatePlayerSpawn(PlayerSpawn.Position, PlayerSpawn.Angle)
 		end
+		for _, Vein in ipairs(tblDecodedTable.OreVeins or {}) do
+			GAMEMODE:CreateOreVein(Vein.Position, Vein.Angle, Vein.Ore, Vein.SpawnTime, Vein.Model, true)
+		end
 	end
 	hook.Add("Initialize", "LoadMapObjects", function() GAMEMODE:LoadMapObjects() end)
 
 	function GM:SaveMapObjects()
 		local strFileName = GAMEMODE.DataFolder .. "/Maps/" .. game.GetMap() .. ".txt"
-		local tblSaveTable = {NPCSpawnPoints = {}, WorldProps = {}, PlayerSpawns = {}}
+		local tblSaveTable = {NPCSpawnPoints = {}, WorldProps = {}, PlayerSpawns = {}, OreVeins = {}}
+		for _, Vein in ipairs(GAMEMODE.MapEntities.OreVeins) do
+			table.insert(tblSaveTable.OreVeins, {Position = Vein.Position, Angle = Vein.Angle, Ore = Vein.Ore, SpawnTime = Vein.SpawnTime, Model = Vein.Model})
+		end
 		for _, Spawn in ipairs(GAMEMODE.MapEntities.PlayerSpawns) do
 			table.insert(tblSaveTable.PlayerSpawns, {Position = Spawn.Position, Angle = Spawn.Angle})
 		end
@@ -366,6 +450,7 @@ if SERVER then
 			for intKey in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do SendSpawnPoint(intKey) end
 			for intKey in ipairs(GAMEMODE.MapEntities.WorldProps) do SendWorldProp(intKey) end
 			for intKey in ipairs(GAMEMODE.MapEntities.PlayerSpawns) do SendPlayerSpawn(intKey) end
+			for intKey in ipairs(GAMEMODE.MapEntities.OreVeins) do SendOreVein(intKey) end
 		end)
 
 		local function IsEditor(ply)
@@ -386,7 +471,7 @@ if SERVER then
 		end
 
 		local function IsKnownModel(strModel)
-			return isstring(strModel) and util.IsValidModel(strModel)
+			return isstring(strModel) and (GAMEMODE:GetStationBuild(strModel) ~= nil or util.IsValidModel(strModel))
 		end
 
 		concommand.Add("UD_Dev_EditMap_AddSpawnPoint", function(ply, command, args)
@@ -467,6 +552,31 @@ if SERVER then
 			GAMEMODE:RemovePlayerSpawn(tonumber(args[1]))
 		end)
 
+		concommand.Add("UD_Dev_EditMap_AddOreVein", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			local Position = VectorFromArgs(args, 1)
+			if not Position then return end
+			local strModel = GAMEMODE:IsOreVeinModel(args[7]) and args[7] or nil
+			GAMEMODE:CreateOreVein(Position, YawAngle(args[4]), args[5], ClampArg(args[6], 10, 3600, GAMEMODE.OreVeinRespawn), strModel)
+		end)
+
+		concommand.Add("UD_Dev_EditMap_UpdateOreVein", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			GAMEMODE:UpdateOreVein(tonumber(args[1]), nil, YawAngle(args[4]), args[2], ClampArg(args[3], 10, 3600, GAMEMODE.OreVeinRespawn), args[5])
+		end)
+
+		concommand.Add("UD_Dev_EditMap_MoveOreVein", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			local Position = VectorFromArgs(args, 2)
+			if not Position then return end
+			GAMEMODE:UpdateOreVein(tonumber(args[1]), Position)
+		end)
+
+		concommand.Add("UD_Dev_EditMap_RemoveOreVein", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			GAMEMODE:RemoveOreVein(tonumber(args[1]))
+		end)
+
 		concommand.Add("UD_Dev_EditMap_SaveMap", function(ply, command, args)
 			if not IsEditor(ply) then return end
 			GAMEMODE:SaveMapObjects()
@@ -518,6 +628,22 @@ if CLIENT then
 
 	net.Receive("UD_RemovePlayerSpawn", function()
 		table.remove(GAMEMODE.MapEntities.PlayerSpawns, net.ReadDouble())
+		hook.Run("UD_MapObjectsChanged")
+	end)
+
+	net.Receive("UD_UpdateOreVein", function()
+		local intKey = net.ReadDouble()
+		local Position = net.ReadVector()
+		local Ang = net.ReadAngle()
+		local Ore = net.ReadString()
+		local SpawnTime = net.ReadDouble()
+		local Model = net.ReadString()
+		GAMEMODE.MapEntities.OreVeins[intKey] = {Position = Position, Angle = Ang, Ore = Ore, SpawnTime = SpawnTime, Model = Model}
+		hook.Run("UD_MapObjectsChanged")
+	end)
+
+	net.Receive("UD_RemoveOreVein", function()
+		table.remove(GAMEMODE.MapEntities.OreVeins, net.ReadDouble())
 		hook.Run("UD_MapObjectsChanged")
 	end)
 end

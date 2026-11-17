@@ -234,8 +234,8 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 		Tooltip = Format("%s\n+%s %s", Tooltip, Amount, StatTable.PrintName)
 	end
 
-	if UseCommand == "buy" and Cost > 0 then Tooltip = Format("%s\n\nBuy For $%s", Tooltip, Cost) end
-	if UseCommand == "sell" and Cost > 0 then Tooltip = Format("%s\n\nSell For $%s", Tooltip, Cost) end
+	if UseCommand == "buy" and Cost > 0 then Tooltip = Format("%s\n\nBuy for %s denars", Tooltip, Cost) end
+	if UseCommand == "sell" and Cost > 0 then Tooltip = Format("%s\n\nSell for %s denars", Tooltip, Cost) end
 	self:SetTooltip(Tooltip)
 	------Double Click------
 	if self.DoUseItem then self:SetDoubleClick(self.DoUseItem) end

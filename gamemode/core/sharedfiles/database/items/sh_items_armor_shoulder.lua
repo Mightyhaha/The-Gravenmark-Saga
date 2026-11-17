@@ -14,26 +14,6 @@ local function AddBuff(AddTable, Buff, Amount)
 	return AddTable
 end
 
-local Item = QuickCreateItemTable(BaseArmor, "armor_shoulder_combine", "Combine Shoulder pads", "Shoulder pads made from Combine faces!", "icons/hat_cheifshat")
-Item = AddModel(Item, "models/BarneyHelmet_faceplate.mdl", Vector(5, 0.6, -6.1), Angle(-117.1, -145, 2), nil, "Models/Gibs/metalgibs/metal_gibs.vtf")
-Item = AddModel(Item, "models/BarneyHelmet_faceplate.mdl", Vector(13.6, 0, -6.2), Angle(-50.2, 180, 0), nil, "Models/Gibs/metalgibs/metal_gibs.vtf")
-Item = AddStats(Item, "slot_shoulder", 5)
-Item = AddBuff(Item, "stat_agility", 1)
-Item.Level = 7
-Item.Weight = 2
-Item.SellPrice = 760
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseArmor, "armor_shoulder_cyborg", "Biomechanical Shoulders", "Alittle creeky... needs oil.", "icons/hat_cheifshat")
-Item = AddModel(Item, "models/Gibs/manhack_gib03.mdl", Vector(5.5, -1.2, -0.6), Angle(-82.3, -42.2, -11.4)) --left
-Item = AddModel(Item, "models/Gibs/manhack_gib02.mdl", Vector(4.1, -0.3, 2.1), Angle(99.7, 180, 173.3))
-Item = AddStats(Item, "slot_shoulder", 23)
-Item = AddBuff(Item, "stat_dexterity", 6)
-Item.Level = 20
-Item.Weight = 2
-Item.SellPrice = 5800
-Register.Item(Item)
-
 local Item = QuickCreateItemTable(BaseArmor, "armor_shoulder_antlion", "Antlion Shell Pauldrons", "They're Sticky... Why are they Sticky?!", "icons/hat_cheifshat")
 Item = AddModel(Item, "models/Gibs/Antlion_gib_small_2.mdl", Vector(5.2, 0.6, -3.9), Angle(-117.1, -145, 2)) --left
 Item = AddModel(Item, "models/Gibs/Antlion_gib_small_2.mdl", Vector(2.1, -0.1, -1.4), Angle(153.2, 180, -180))
@@ -61,18 +41,6 @@ Item = AddBuff(Item, "stat_strength", 10)
 Item.Level = 33
 Item.Weight = 4
 Item.SellPrice = 9786
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseArmor, "armor_shoulder_bio", "Pauldrons of the Overseer", "Created from light and durable metal, increases ranged combat", "icons/hat_cheifshat")
-Item = AddModel(Item, "models/Gibs/manhack_gib03.mdl", Vector(2.1, 0.3, -4.5), Angle(-15.4, -51.5, -169.3)) --left
-Item = AddModel(Item, "models/Gibs/manhack_gib02.mdl", Vector(3.3, -0.3, 2.1), Angle(99.7, 180, 173.3))
-Item = AddModel(Item, "models/Gibs/manhack_gib01.mdl", Vector(-11, 2.1, -1.5), Angle(125.1, 149.2, -50.2))
-Item = AddModel(Item, "models/Gibs/manhack_gib01.mdl", Vector(11.6, -0.3, 2.1), Angle(-123.8, -47.5, -170.6))
-Item = AddStats(Item, "slot_shoulder", 42)
-Item = AddBuff(Item, "stat_dexterity", 20)
-Item.Level = 42
-Item.Weight = 2
-Item.SellPrice = 9960
 Register.Item(Item)
 
 local Item = QuickCreateItemTable(BaseArmor, "armor_shoulder_tyrant", "Pauldrons of the Tyrant", "Made from the finest materials, for protection.", "icons/hat_cheifshat")

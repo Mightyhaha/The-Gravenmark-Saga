@@ -88,7 +88,7 @@ function PANEL:LoadAuctions()
 				Auction:SetFont("MenuLarge")
 				Auction:SetItemIcon(Info.Item, Info.Amount, 30)
 				Auction:SetNameText(ItemTable(Info.Item).PrintName)
-				Auction:SetDescText("$" .. Info.Price .. "   " .. math.Round(Info.TimeLeft - (CleanUpTime - DefaultAuctionTime)) .. " Hours Left")
+				Auction:SetDescText(Info.Price .. " denars   " .. math.Round(Info.TimeLeft - (CleanUpTime - DefaultAuctionTime)) .. " Hours Left")
 				if Info.SellerID == LocalPlayer():SteamID() or game.SinglePlayer() then
 					Auction:AddButton("icon16/check_off.png", "Cancel Auction", function() RunConsoleCommand("UD_CancelAuction", Key) end)
 				end

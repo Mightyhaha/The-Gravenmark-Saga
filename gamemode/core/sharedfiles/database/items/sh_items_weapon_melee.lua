@@ -94,16 +94,6 @@ Item.SellPrice = 420
 Item.CanCutWood = true
 Register.Item(Item)
 
-local Item = QuickCreateItemTable(BaseWeapon, "weapon_melee_emptool", "Emp Tool", "Alyx Must've dropped this back in black mesa.", "icons/weapon_axe")
-Item = AddModel(Item, "models/alyx_EmpTool_prop.mdl", Vector(-1.9, -1, 0.3), Angle(86.3, -99.7, -134.5))
-Item = AddStats(Item, 12.5, 4.0)
-Item = AddSound(Item, "weapons/stunstick/stunstick_swing1.wav")
-Item.Level = 7
-Item.Weight = 1
-Item.SellPrice = 743
-Item.CanCutWood = false
-Register.Item(Item)
-
 local Item = QuickCreateItemTable(BaseWeapon, "weapon_melee_knife", "Knife", "Cutting knifeS", "icons/weapon_cleaver")
 Item = AddModel(Item, "models/weapons/w_knife_ct.mdl", Vector(-3.7, -0.3, 1.7), Angle(-8.7, 75.6, 31.4))
 Item = AddStats(Item, 23, 2.5)
@@ -131,15 +121,6 @@ Item = AddSound(Item, "weapons/iceaxe/iceaxe_swing1.wav")
 Item.Level = 12
 Item.Weight = 3
 Item.SellPrice = 2156
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseWeapon, "weapon_melee_circularsaw", "Circular Saw", "Zing Zing Ziiiingg!", "icons/junk_saw")
-Item = AddModel(Item, "models/props_forest/circularsaw01.mdl", Vector(3.2, -7.7, -8.1), Angle(27.4, 123.8, -11.4))
-Item = AddStats(Item, 41, 1.8)
-Item = AddSound(Item, "weapons/iceaxe/iceaxe_swing1.wav")
-Item.Level = 13
-Item.Weight = 1
-Item.SellPrice = 3247
 Register.Item(Item)
 
 local Item = QuickCreateItemTable(BaseWeapon, "weapon_melee_anttalon", "Antlion Talon", "Stolen from an Antlion!", "icons/weapon_axe")
@@ -184,24 +165,6 @@ Item = AddSound(Item, "weapons/iceaxe/iceaxe_swing1.wav")
 Item.Level = 17
 Item.Weight = 5
 Item.SellPrice = 4530
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseWeapon, "weapon_melee_exhaust", "Car Exhaust", "How the hell is that car going to move?", "icons/weapon_axe")
-Item = AddModel(Item, "models/props_vehicles/carparts_muffler01a.mdl", Vector(15.12, -7.8, -1.95), Angle(-90, 0, 0), nil, "Models/props_building_details/courtyard_template001c_bars_dark.vtf", Vector(0.6, 0.8, 0.8))
-Item = AddStats(Item, 60, 1.5)
-Item = AddSound(Item, "weapons/iceaxe/iceaxe_swing1.wav")
-Item.Level = 20
-Item.Weight = 4
-Item.SellPrice = 5590
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseWeapon, "weapon_melee_powerhammer", "Power Hammer", "Uses combine thumper tech to add explosive damage.", "icons/weapon_axe")
-Item = AddModel(Item, "models/Combine_turrets/Floor_turret_gib4.mdl", Vector(-7.8, -4.88, 8.29), Angle(29.63, 151.46, -15.37), nil, nil, Vector(1, 1, 1))
-Item = AddStats(Item, 48.5, 2)
-Item = AddSound(Item, "weapons/iceaxe/iceaxe_swing1.wav")
-Item.Level = 22
-Item.Weight = 1
-Item.SellPrice = 6254
 Register.Item(Item)
 
 local Item = QuickCreateItemTable(BaseWeapon, "weapon_melee_hammer", "Bros. Hammer", "STOP, Hammer Time'", "icons/weapon_axe")

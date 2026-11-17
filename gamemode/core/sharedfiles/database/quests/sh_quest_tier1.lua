@@ -91,7 +91,7 @@ Quest.ObtainItems["quest_zombieblood"] = 10
 Quest.GainedExp = 70
 Quest.GainedItems = {}
 Quest.GainedItems["money"] = 120
-Quest.GainedItems["item_antivirus"] = 1
+Quest.GainedItems["item_healthkit"] = 1
 Register.Quest(Quest)
 
 --Community made quests

@@ -5,9 +5,11 @@ local Icons = {
 	axe = "icons/weapon_axe",
 	spear = "icons/weapon_pipe",
 	hammer = "icons/tool_wrench",
+	bow = "icons/weapon_pipe",
+	crossbow = "icons/weapon_pipe",
 }
 
-local Weights = {sword = 3, axe = 3, spear = 3, hammer = 4}
+local Weights = {sword = 3, axe = 3, spear = 3, hammer = 4, bow = 2, crossbow = 4}
 
 local Tint = {
 	rust = Color(205, 120, 60, 255),
@@ -33,9 +35,11 @@ local function Merged(strMaterial, clrTint)
 end
 
 local function NayrSword(clrTint) return Single("models/nayrbarr/sword/sword.mdl", Vector(-16.4, -0.3, 0), Angle(98.3, 0, 0), clrTint) end
-local function NayrAxe(clrTint) return Single("models/nayrbarr/axe/axe.mdl", Vector(0, 7, 0), Angle(0, 0, 90), clrTint) end
-local function NayrSpear(clrTint) return Single("models/nayrbarr/spear/spear.mdl", Vector(0, 0, 0), Angle(-90, 0, 0), clrTint) end
-local function NayrHammer(clrTint) return Single("models/nayrbarr/hammer/hammer.mdl", Vector(5, 0, 0), Angle(-90, 0, 0), clrTint) end
+local function NayrAxe(clrTint) return Single("models/nayrbarr/axe/axe.mdl", Vector(-0.13, -11.81, -3.39), Angle(0, 73.7, -90), clrTint) end
+local function NayrSpear(clrTint) return Single("models/nayrbarr/spear/spear.mdl", Vector(-19.99, -0.89, -0.08), Angle(83.4, 175.2, 180), clrTint) end
+local function NayrHammer(clrTint) return Single("models/nayrbarr/hammer/hammer.mdl", Vector(-5, 0, -0.16), Angle(88.2, 180, 180), clrTint) end
+local function NayrBow(clrTint) return Single("models/nayrbarr/bow/bow.mdl", Vector(5.76, 0.22, -27.95), Angle(0, 171.5, 2.4), clrTint) end
+local function NayrCrossbow(clrTint) return Single("models/nayrbarr/crossbow/crossbow.mdl", Vector(-15.03, 0, 0), Angle(0, 180, 0), clrTint) end
 local function ShortSword(clrTint) return Single("models/items/weapons/sword_short/sword_short.mdl", Vector(0, -0.76, -0.2), Angle(-90, 10, 0), clrTint) end
 local function LongSword(clrTint) return Single("models/items/weapons/sword_long/sword_long.mdl", Vector(1, -0.76, -0.2), Angle(-90, 10, 0), clrTint) end
 local function SilverSword(clrTint) return Single("models/items/weapons/sword_silver/sword_silver.mdl", Vector(0, -0.76, -0.2), Angle(-90, 10, 0), clrTint) end
@@ -116,6 +120,41 @@ Ladders.hammer = {
 	{143, "weapon_melee_dreadforged_maul", "Dreadforged Maul", "It falls slowly, and nothing gets up.", NayrHammer(Tint.dread)},
 }
 
+Ladders.bow = {
+	{6, "weapon_ranged_huntingbow", "Hunting Bow", "A short ash bow strung with gut. Good for hares, and for worse.", NayrBow()},
+	{16, "weapon_ranged_shortbow", "Horn Short Bow", "A horn-backed short bow, quick to draw from the saddle.", NayrBow(Tint.scrap)},
+	{26, "weapon_ranged_yewlongbow", "Yew Longbow", "A tall yew bow. A levyman's weapon, and a deadly one at a hundred paces.", NayrBow(Tint.rust)},
+	{36, "weapon_ranged_iron_recurve", "Iron-Capped Recurve", "A recurve bow with iron caps on the limbs. It throws an arrow hard and flat.", NayrBow(Tint.iron)},
+	{46, "weapon_ranged_steel_recurve", "Steel Recurve", "Steel-backed limbs that hold their draw through rain and frost.", NayrBow(Tint.steel)},
+	{56, "weapon_ranged_steel_warbow", "Steel War Bow", "A heavy war bow. Few can draw it twice in a row, fewer can be hit twice by it.", NayrBow(Tint.steel)},
+	{66, "weapon_ranged_silver_longbow", "Silvered Longbow", "Its limbs are bound in silver wire. Hunters of the old forests swear by it.", NayrBow(Tint.silver)},
+	{76, "weapon_ranged_silver_recurve", "Silver Recurve", "A lord's hunting bow, quick and true.", NayrBow(Tint.silver)},
+	{86, "weapon_ranged_glass_longbow", "Glass Longbow", "Green glass laminated over horn. It sings when loosed.", NayrBow(Tint.glass)},
+	{96, "weapon_ranged_moonglass_bow", "Moonglass Bow", "Pale glass that throws a cold light. Its arrows are hard to see coming.", NayrBow(Tint.moon)},
+	{106, "weapon_ranged_ebony_longbow", "Ebony Longbow", "Black wood heavy as iron. Only the strong can string it.", NayrBow(Tint.ebony)},
+	{116, "weapon_ranged_ashen_bow", "Ashen Ebony Bow", "Ebony frosted grey by funeral ash. It never misses its mark twice.", NayrBow(Tint.ash)},
+	{126, "weapon_ranged_gravensteel_recurve", "Gravensteel Recurve", "A recurve with Gravensteel limbs, built for the archers on the old wall.", NayrBow(Tint.graven)},
+	{136, "weapon_ranged_gravensteel_warbow", "Gravensteel War Bow", "The bow of the wall's last captains. Its arrows go through mail.", NayrBow(Tint.graven)},
+	{146, "weapon_ranged_dreadforged_longbow", "Dreadforged Longbow", "Strung with something that is not gut. The arrows whisper as they fly.", NayrBow(Tint.dread)},
+}
+
+Ladders.crossbow = {
+	{12, "weapon_ranged_lightcrossbow", "Light Crossbow", "A hunting crossbow with a wooden prod. Slow, but anyone can aim it.", NayrCrossbow()},
+	{22, "weapon_ranged_iron_crossbow", "Iron Crossbow", "An iron prod on an oak stock. Its bolts punch through leather.", NayrCrossbow(Tint.iron)},
+	{32, "weapon_ranged_iron_arbalest", "Iron Arbalest", "A heavy crossbow drawn with a windlass. Worth the wait.", NayrCrossbow(Tint.iron)},
+	{42, "weapon_ranged_steel_crossbow", "Steel Crossbow", "A steel-prodded crossbow of the town watch.", NayrCrossbow(Tint.steel)},
+	{52, "weapon_ranged_steel_arbalest", "Steel Arbalest", "A siege crossbow cut down for the hand. It cracks shields.", NayrCrossbow(Tint.steel)},
+	{62, "weapon_ranged_silver_crossbow", "Silver Crossbow", "Silver fittings on a black stock. A noble's weapon for the hunt.", NayrCrossbow(Tint.silver)},
+	{72, "weapon_ranged_silver_arbalest", "Silver Arbalest", "A silvered arbalest of the Hallowgate honour guard.", NayrCrossbow(Tint.silver)},
+	{82, "weapon_ranged_glass_crossbow", "Glass Crossbow", "A prod of green glass that never loses its spring.", NayrCrossbow(Tint.glass)},
+	{92, "weapon_ranged_glass_arbalest", "Glass Arbalest", "Glass laminated over steel. The bolt leaves before you hear it.", NayrCrossbow(Tint.glass)},
+	{102, "weapon_ranged_ebony_crossbow", "Ebony Crossbow", "Black and heavy. It is aimed once and remembered long.", NayrCrossbow(Tint.ebony)},
+	{112, "weapon_ranged_ebony_arbalest", "Ebony Arbalest", "An ebony arbalest that only a winch can draw.", NayrCrossbow(Tint.ebony)},
+	{122, "weapon_ranged_gravensteel_crossbow", "Gravensteel Crossbow", "Gravensteel prod, wall-oak stock. Made to hold a gate alone.", NayrCrossbow(Tint.graven)},
+	{132, "weapon_ranged_gravensteel_arbalest", "Gravensteel Arbalest", "The great crossbow of the Gravenmark towers.", NayrCrossbow(Tint.graven)},
+	{142, "weapon_ranged_dreadforged_arbalest", "Dreadforged Arbalest", "Its bolts are never found again, and neither is what they hit.", NayrCrossbow(Tint.dread)},
+}
+
 for strClass, tblLadder in pairs(Ladders) do
 	local Class = GM.WeaponClasses[strClass]
 	for _, Entry in ipairs(tblLadder) do
@@ -127,13 +166,34 @@ for strClass, tblLadder in pairs(Ladders) do
 		Item.Power = GM:GetWeaponTierPower(strClass, intLevel)
 		Item.FireRate = Class.FireRate
 		Item.HoldType = Class.HoldType
-		Item.Melee = true
+		Item.Melee = Class.AmmoType == nil
 		Item.Range = Class.Range
 		Item.CritBonus = Class.CritBonus
-		Item.Sound = Sound
+		Item.Sound = Class.Sound or Sound
+		if Class.AmmoType then
+			Item.AmmoType = Class.AmmoType
+			Item.ClipSize = Class.ClipSize
+			Item.ReloadTime = Class.ReloadTime
+			Item.Accuracy = Class.Accuracy
+			Item.ReloadSound = Class.ReloadSound
+		end
 		Item.Weight = Entry[6] or Weights[strClass]
 		Item.SellPrice = GM:GetGearPrice(intLevel)
 		Item.Crafted = true
 		Register.Item(Item)
 	end
 end
+
+local function Ammo(strName, strPrintName, strDesc, strAmmoType, intAmount, intPrice, clrTint)
+	local Item = QuickCreateItemTable(BaseAmmo, strName, strPrintName, strDesc, "icons/item_rifleammo")
+	Item.AmmoType = strAmmoType
+	Item.AmmoAmount = intAmount
+	Item.Model = {{Model = "models/items/crossbowrounds.mdl", Position = Vector(0, 0, 0), Angle = Angle(0, 0, 0), Color = clrTint}}
+	Item.Stackable = true
+	Item.Weight = 0.2
+	Item.SellPrice = intPrice
+	Register.Item(Item)
+end
+
+Ammo("item_arrows", "Bundle of Arrows", "Twenty goose-fletched arrows with iron bodkin heads. Use it to fill your quiver.", "ud_arrow", 20, 4, Tint.rust)
+Ammo("item_bolts", "Bundle of Bolts", "Fifteen short, heavy crossbow bolts. Use it to fill your bolt case.", "ud_bolt", 15, 5)

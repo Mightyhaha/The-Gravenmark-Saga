@@ -133,8 +133,6 @@ local function NPCAdjustDamage(Victim, DamageInfo)
 			Victim:AddEntityRelationship(Attacker, GAMEMODE.RelationHate, 99)
 		end
 		if Victim:Health() < 2 and Victim:IsBuilding() then
-			local NPCTable = NPCTable(Victim:GetNWString("npc"))
-			if not NPCTable then return end
 			Attacker:AddQuestKill(Victim:GetNWString("npc"))
 		end
 		DamageInfo:SetDamage(math.Round(DamageInfo:GetDamage() + math.random(-1, math.Round(1 * (1 + (Attacker:GetStat("stat_luck") / 55))))))

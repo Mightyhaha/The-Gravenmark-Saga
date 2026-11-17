@@ -107,14 +107,16 @@ The Medieval NPC Melee Weapons addon also gives NPC weapons that show their own 
 
 ### Medieval weapons
 
-`sh_items_medieval.lua` holds four weapon classes. Each class has its own ladder with a new weapon every 10 levels up to level 150. The ladders are staggered, so something new turns up every few levels, and any class can be used at any level.
+`sh_items_medieval.lua` holds six weapon classes: four melee and two ranged. Each class has its own ladder with a new weapon every 10 levels up to level 150. The ladders are staggered, so something new turns up every few levels, and any class can be used at any level.
 
 | Class | Ladder levels | Speed | Trait |
 | --- | --- | --- | --- |
 | Sword | 1, 10, 20 ... 150 | 1.7, fast | Quickest swings |
 | Axe | 5, 15, 25 ... 145 | 1.4 | +10% critical chance (`Item.CritBonus`) |
-| Spear | 8, 18, 28 ... 148 | 1.2 | Reaches 95 units instead of 70 (`Item.Range`) |
+| Spear | 8, 18, 28 ... 148 | 1.2 | Reaches 95 units instead of 70 (`Item.Range`). One-handed, so it works with a shield |
 | Hammer and mace | 3, 13, 23 ... 143 | 0.9, slow | Hits about 1.8 times harder per swing |
+| Bow | 6, 16, 26 ... 146 | 1 shot a second (0.5 s draw, 0.5 s nock) | Ranged, uses arrows. 85% of melee damage per second |
+| Crossbow | 12, 22, 32 ... 142 | 1 shot every 2 seconds (1.5 s reload) | Ranged and very accurate, uses bolts. Big single hits, 90% of melee damage per second |
 
 Damage comes from `GM:GetWeaponTierPower(class, level)` in `gamemode/core/sharedfiles/sh_combat.lua`. It reads the `8 + 0.55 x level` curve half a gap ahead of the weapon's level (5 levels), so a weapon is a little strong when you get it and a little weak when the next one arrives. The class traits are paid for in swing speed, so damage per second stays within about 10% across classes, counting crits for axes. Hammers get 5% more because every swing slows you for `1 / speed` seconds. Class numbers are in `GM.WeaponClasses`.
 
@@ -124,6 +126,12 @@ Damage comes from `GM:GetWeaponTierPower(class, level)` in `gamemode/core/shared
 | Axe | Hand Axe, War Axe, then a Hatchet and a Bearded Axe in each of Iron, Steel, Silver, Glass, Ebony and Gravensteel, then Dreadforged War Axe |
 | Spear | Spear, Boar Spear, then a Spear and a Partisan in each of Iron, Steel, Silver, Glass, Ebony and Gravensteel, then Dreadforged Spear |
 | Hammer and mace | Smithing Hammer, War Hammer, then a Mace and a Maul in each of Iron, Steel, Silver, Glass, Ebony and Gravensteel, then Dreadforged Maul |
+| Bow | Hunting Bow, Horn Short Bow, Yew Longbow, then two bows in each of Iron/Steel, Silver, Glass, Ebony and Gravensteel, then Dreadforged Longbow |
+| Crossbow | Light Crossbow, then a Crossbow and an Arbalest in each of Iron, Steel, Silver, Glass, Ebony and Gravensteel, then Dreadforged Arbalest |
+
+**Bows and crossbows.** They use the Bremergard bow and crossbow models. Damage per tier comes from the full shot cycle, draw plus reload (`GM:GetWeaponCycleRate`), so a slow crossbow hits much harder per bolt. Both are two-handed, so no shield. Ammo is `item_arrows` (20 arrows) and `item_bolts` (15 bolts): use a bundle from your inventory to fill your quiver. The General Store and the Bowyer and Fletcher (`shop_ranged`) sell both, and the bowyer sells bows and crossbows up to level 20. Bows are crafted by Leatherworking at a leatherworking bench, crossbows by Blacksmithing with leather.
+
+**Removed Underdone items.** The old sci-fi gear is gone: all guns and gun ammo, the cyborg, Overseer and Combine armor, the jetpack, gas mask, headcrab hat, scanner goggles, meta-carbon and composite shields, the EMP tool, power hammer, circular saw, car exhaust and anti-virus. Their two quests (Arsenal Upgrade and An offer you can't refuse) and the two sets went with them. A saved character that still holds one of these items is paid its old sell price in denars when it loads (`GM.RemovedItemValues` in `sh_items_removed.lua`). New characters start with a Rusty Sword, a Hunting Bow and 40 arrows.
 
 Only a few weapon shapes exist (Bremergard sword, axe, spear and hammer, the five NPC Melee Weapons models, and the six Morrowind longswords), so most tiers recolour a shape with the metal's tint. Swap in a better model or adjust positions with the armor builder (below). The NPC Melee Weapons models use the hand positions from that addon. Item ids did not change, so old saves still load, but levels moved: the Iron Longsword went from 10 to 30, the Steel Longsword from 25 to 50 and the Glass Longsword from 70 to 80.
 
@@ -169,7 +177,7 @@ Rings are not sold in shops. From level 45 there are six unique rings that are m
 
 ### Crafting
 
-Three trades replace the old Underdone ones: **Blacksmithing**, **Leatherworking** and **Tailoring**. Trades level from tier 1 to 15 in the Character tab. A recipe needs the trade tier `ceil(item level / 10)`, so a level 30 sword needs tier 3 and a level 150 sword tier 15. You can hold 45 tiers in total, enough for all three trades at 15, and you pay one tier at a time with the arrow button once the bar is full. Crafting gives trade experience (`25 + 12 x tier`, scaled down when the recipe is easy for you), and a craft always succeeds when you meet the requirements.
+Three trades replace the old Underdone ones: **Blacksmithing**, **Leatherworking** and **Tailoring**. Trades level from tier 1 to 15 in the Character tab. A recipe needs the trade tier `ceil(item level / 10)`, so a level 30 sword needs tier 3 and a level 150 sword tier 15. Mining (below) is a fourth trade. You can hold 60 tiers in total, enough for all four trades at 15, and you pay one tier at a time with the arrow button once the bar is full. Crafting gives trade experience (`25 + 12 x tier`, scaled down when the recipe is easy for you), and a craft always succeeds when you meet the requirements.
 
 | Item | Trades |
 | --- | --- |
@@ -179,7 +187,15 @@ Three trades replace the old Underdone ones: **Blacksmithing**, **Leatherworking
 | Belts from level 20 | Leatherworking |
 | Gambeson, coif and quilted belt (the Recruit's Kit) | Tailoring |
 
-**Stations.** Smithing needs an anvil or forge nearby and the other two need a workbench, within 200 units. The models are listed in `GM.CraftingStations` in `sh_recipes.lua` (the Bremergard anvil and brazier for smithing, and several of the pack's tables for the workbench). Place them with the map editor. Press E on one to open the crafting window, or use **Library > Crafting ...** in the inventory, or `UD_OpenCraftMenu [smithing|workbench]`.
+**Stations.** Each trade crafts at its own station, within 200 units: Blacksmithing (and smelting) at a forge or anvil, Leatherworking at a leatherworking bench, and Tailoring at a tailoring table. Place them with the map editor's **World props** mode: the first three icons in the grid are the stations.
+
+| Station | Built around | Decoration |
+| --- | --- | --- |
+| Forge (`station:forge`) | Stone fireplace | Coal brazier in the hearth, anvil with tongs and hammer, iron bars, quenching trough, log pile |
+| Tailoring table (`station:tailoring`) | Work table | Cloth basket, open pattern scroll, three bolts of cloth, a dressed mannequin, a stool |
+| Leatherworking bench (`station:leatherwork`) | Wooden bench | Hide on the bench, a mallet, a stretching frame with a hide, a tanning vat, a stool |
+
+Only the main prop is solid; the decoration is drawn on every client around it. The stations are defined in `GM.StationBuilds` in `sh_stations.lua`, where each decoration part has a model, position and angle relative to the main prop, and an optional scale, material and tint. The Bremergard anvil and brazier still count as smithing stations on their own (`GM.CraftingStations` in `sh_recipes.lua`). Press E on a station to open the crafting window on its trade, or use **Library > Crafting ...** in the inventory, or `UD_OpenCraftMenu [smithing|leatherwork|tailoring]`.
 
 **Recipes** are generated in `sh_recipes_gear.lua`, one per equipment item marked `Item.Crafted = true`. Every recipe is known from the start, and the window shows what you can make and what you are missing. A recipe can still use `Recipe.Hidden = true` to need a book (`GainRecipes` on a book item).
 
@@ -196,13 +212,30 @@ Three trades replace the old Underdone ones: **Blacksmithing**, **Leatherworking
 | 7 | 120 to 139 | Gravensteel Ingot | Direwolf Hide | Gilded Brocade |
 | 8 | 140 to 150 | Dreadforged Ingot | Wyrmhide | Royal Velvet |
 
-**Where materials come from.** Every Morvaine and Gallows Company enemy drops the materials of its own level band (25% chance per kind, one or two at a time), so what drops follows the level you spawn the enemy at. Brannoc Hale (`shop_smith`, shop `shop_craftsupplies`) sells all of them, and the Dunmarrow Quartermaster sells band 1. The level 7 quest "Iron for the Levy" hands out a starter bundle.
+**Where materials come from.** Metal comes from mining ore and smelting it (below). Every Morvaine and Gallows Company enemy drops the leather and cloth of its own level band (25% chance per kind, one or two at a time), so what drops follows the level you spawn the enemy at. Brannoc Hale (`shop_smith`, shop `shop_craftsupplies`) sells bands 1 and 2 only (`GM.Combat.ShopMaterialMaxBand`), and the Dunmarrow Quartermaster sells band 1. The level 7 quest "Iron for the Levy" hands out a starter bundle.
 
-**Shops.** The Blacksmith (`shop_melee`) and the Armor Store (`shop_armor`) sell every weapon, armor and necklace on the ladders at 2.7 times the item's sell price, listed by level. The Quartermaster sells gear up to level 20.
+**Shops.** The Blacksmith (`shop_melee`) and the Armor Store (`shop_armor`) sell weapons, armor and necklaces up to level 20 (`GM.Combat.ShopGearMaxLevel`) at 2.7 times the item's sell price, listed by level. Better gear is crafted or looted. The Quartermaster sells gear up to level 20.
 
 **Fair crafting.** The material value of a recipe is at least half of the item's sell price (`GM.Combat.CraftValueShare`, rounded up), so crafting from bought materials costs roughly half of buying the item. It can never make money by buying materials, crafting and selling, even with the two price skills stacked (about 17% off). Recipe counts follow the item's price, so higher-level items in a band cost more materials than lower ones. Material prices are set from the band's top level (`GM.Combat.CraftUnitsAtBandTop`).
 
 The old Underdone trades (Mechanical, Electrical, Chemical, Physics, Biotech, Culinary, Horticulture and Crafting) and their recipes were removed. Their recipe books are still defined so old saves load, but teach nothing and are no longer sold.
+
+### Mining and smelting
+
+Ore veins are placed with the map editor's **Ore veins** mode (`sh_items_ores.lua`, `sh_mining.lua`). Press E on a vein to mine it for 3 seconds: you get 2 or 3 ore (sometimes one more with Luck) and Mining experience, and the vein disappears until its respawn time has passed (180 seconds by default, set per vein). Looking at a vein shows its ore and whether your Mining tier is high enough.
+
+| Ore | Smelts into | Mining and Blacksmithing tier | Place veins in areas of level |
+| --- | --- | --- | --- |
+| Bog Iron | Scrap Iron | 1 | 1 to 19 |
+| Iron | Iron Ingot | 2 | 20 to 39 |
+| Blackiron | Steel Ingot | 4 | 40 to 59 |
+| Silver | Silver Ingot | 6 | 60 to 79 |
+| Glass Crystal | Glass Ingot | 8 | 80 to 99 |
+| Ebony | Ebony Ingot | 10 | 100 to 119 |
+| Gravenstone | Gravensteel Ingot | 12 | 120 to 139 |
+| Dreadstone | Dreadforged Ingot | 14 | 140 to 150 |
+
+Smelting is a Blacksmithing recipe at an anvil or forge (`sh_recipes_smelting.lua`): 2 ore make 1 ingot, or 10 ore make 5 in one go. The Smelting filter in the crafting window lists them. Each vein uses one of the stone models in `GM.OreVeinModels` (the rp_bremergard_forest stones first, then two HL2 granite rocks), tinted per ore, with the bottom 30% sunk into the ground where you click (`GM.OreVeinSink`).
 
 ### Armor builder
 
@@ -213,9 +246,27 @@ The old Underdone trades (Mechanical, Electrical, Chemical, Physics, Biotech, Cu
 3. Move it with **Position**. On the head, chest, shoulder and waist slots this is forward / left / up from the slot point, so it means the same on every slot. Turn it with **Angle**, size it per axis with **Scale**.
 4. Give it a **Material** (Browse has the Bremergard leather, iron, steel and wood, plus cloth) and a **Tint**.
 5. **Duplicate** copies a part, **Mirror** copies it to the other side of the body (pauldrons, greaves), **Remove** deletes it. The selected part has a yellow box.
-6. **Copy item Lua** puts the `AddModel` lines on the clipboard (and in the console). Paste them into an item. **Try on worn item** applies the design to the item you wear in that slot until the map changes, so you can walk around in it.
+6. **Copy item Lua** puts the `AddModel` lines on the clipboard (and in the console). Paste them into an item. While the builder is open your design is worn live in that slot and follows every slider. **Apply to worn item** keeps the design on the item you wear there after you close the builder, until the map changes.
 
 The camera sliders orbit around your character (0 is the front). To get items to test with, use `UD_Dev_GiveItem <item> [amount]`.
+
+### Item icons
+
+`UD_Dev_RenderIcons` (single player) renders inventory icons from the items' own models (`cl_icon_renderer.lua`). Each item is drawn off-screen at 128 x 128 on a parchment background with fixed studio lighting, framed automatically to fill the icon, and saved to `data/gravenmark_icons/<item>.png`. The new icon shows in your inventory straight away.
+
+| Command | Renders |
+| --- | --- |
+| `UD_Dev_RenderIcons` | Every gear item, ore and crafting material that has a model and no generated icon yet |
+| `UD_Dev_RenderIcons <filter>` | Only items whose name contains the filter, for any item with a model, for example `weapon_melee_iron` |
+| `UD_Dev_RenderIcons <filter> force` | The same, even if an icon already exists. Use `UD_Dev_RenderIcons all force` to redo everything |
+
+Armor is shown from the front (helmets three-quarter front), weapons from the side running diagonally, and shields from their face. An item that looks wrong can set its own view, where `Zoom` above 1 moves closer:
+
+```lua
+Item.IconView = {Angle = Angle(0, 210, 0), Zoom = 1.1}
+```
+
+To keep the icons, copy the PNG files from `garrysmod/data/gravenmark_icons/` to `content/materials/icons/gen/` and commit them. `sh_items_zzz_icons.lua` gives every item with a file there its generated icon, and items without one keep their old icon. Icons only in the data folder are also used, but only on your own machine. An icon rendered again with `force` shows its new picture after a map change, because the game caches images it has already loaded.
 
 ### Skills and leveling
 
@@ -230,7 +281,7 @@ Characters can reach level 150. Each level needs more experience than the last (
 | 100 | 17,500 | about 53 |
 | 149 | 37,026 | about 75 |
 
-You get one skill point per level and a bonus point every 10 levels (165 at level 150). The Skills tab in the main menu shows five branches: The Sword-Arm (melee), The Fletcher's Eye (ranged), The Bulwark (defense), The Wayfarer (food, rest, carrying, coin) and The Banner (luck, experience, squad auras). New rows unlock at levels 1, 5, 12, 20, 30, 45, 60, 80, 105, 130 and 150, each skill needs the one above it, and each branch ends in a capstone at level 150 that costs 5 points. Click a skill with a gold border to learn it; **Forget skills** refunds everything for 20 coins per level (at least 100).
+You get one skill point per level and a bonus point every 10 levels (165 at level 150). The Skills tab in the main menu shows five branches: The Sword-Arm (melee), The Fletcher's Eye (ranged), The Bulwark (defense), The Wayfarer (food, rest, carrying, coin) and The Banner (luck, experience, squad auras). New rows unlock at levels 1, 5, 12, 20, 30, 45, 60, 80, 105, 130 and 150, each skill needs the one above it, and each branch ends in a capstone at level 150 that costs 5 points. Click a skill with a gold border to learn it; **Forget skills** refunds everything for 20 denars per level (at least 100).
 
 Skills live in `gamemode/core/sharedfiles/database/skills/`. Use `CreateSkill`, `AddSkillStatDesc` / `SetSkillDesc` and `RegisterSkill`; hooks include `damage_mod`, `firerate_mod`, `damage_taken_mod`, `armor_mod`, `exp_mod`, `food_mod`, `price_mod`, `drop_mod`, `buff_duration_mod` and `on_kill`, plus `Skill:Think(ply, rank)` (every second) and `Skill:BulletCallBack`.
 
@@ -265,10 +316,11 @@ Using a prop whose model is listed in `GM.SearchableProps` (`gamemode/init.lua`)
 | --- | --- |
 | `UD_Dev_EditMap` | Opens or closes the map editor for NPC spawn points and props. Layouts are saved per map to `data/underdone/Maps/<map>.txt`. |
 | `UD_Dev_EditPaperDoll` | The armor builder: design or adjust worn equipment from props and copy the item Lua. |
+| `UD_Dev_RenderIcons [filter] [force]` | Renders item icons from the item models into `data/gravenmark_icons/` (see Item icons). |
 | `UD_Dev_EditPaperDoll_Debug` | Prints what the armor builder and your character are drawing, for tracking down display problems. |
 | `UD_Dev_GiveItem <item> [amount]` | Gives you an item (single player, or superadmin). |
-| `UD_Dev_SetTrade <blacksmithing\|leatherworking\|tailoring\|all> <tier>` | Sets a crafting trade to tier 1 to 15 (single player, or superadmin). |
-| `UD_OpenCraftMenu [smithing\|workbench]` | Opens the crafting window. Press E on an anvil or table to open it in game. |
+| `UD_Dev_SetTrade <blacksmithing\|leatherworking\|tailoring\|mining\|all> <tier>` | Sets a trade to tier 1 to 15 (single player, or superadmin). |
+| `UD_OpenCraftMenu [smithing\|leatherwork\|tailoring]` | Opens the crafting window on that trade. Press E on a station to open it in game. |
 
 Using the map editor:
 
@@ -277,6 +329,7 @@ Using the map editor:
 - **Left-click** an existing marker to select it: change its settings and press **Apply changes**, **Move** it to your next click, or **Remove** it.
 - **Right-click** cancels or deselects. Your weapon does not fire while the editor is open.
 - A spawn point spawns **How many NPCs** at once, randomly inside its **Spawn area radius** (0 means exactly on the marker). Each one respawns its own **Respawn** seconds after dying.
+- **Ore veins** mode places mineable rocks: pick the ore, the stone model and the respawn time, then Add. Click a vein's marker to change, move or remove it.
 - **Player spawns** mode places where players appear, facing the arrow's direction. Players spawn at a random one that nobody is standing on; with none placed, the map's own spawn is used.
 - Press **Save map** when you are done; the window shows when there are unsaved changes.
 

@@ -19,6 +19,8 @@ local NWStrings = {
 	"UD_RemoveWorldProp",
 	"UD_UpdatePlayerSpawn",
 	"UD_RemovePlayerSpawn",
+	"UD_UpdateOreVein",
+	"UD_RemoveOreVein",
 	"UD_UpdateCurrentBook",
 	"UD_UpdateTradeItem",
 	"UD_UpdateQuest",
@@ -106,9 +108,14 @@ function GM:UseKeyPressed(ply)
 	ply:SearchQuestProp(trace.Entity, "models/props/cs_militia/caseofbeer01.mdl", "quest_beer", 1)
 	ply:SearchQuestProp(trace.Entity, "models/props_c17/oildrum001.mdl", "quest_oil", 1)
 
+	if IsValid(trace.Entity) and trace.Entity.UD_OreVeinKey then
+		ply:MineVein(trace.Entity)
+		return
+	end
+
 	local entStation = trace.Entity
 	if IsValid(entStation) then
-		local strStation = self:GetStationOf(entStation:GetModel())
+		local strStation = self:GetStationOf(entStation:GetModel(), entStation)
 		if strStation and entStation:GetPos():DistToSqr(ply:GetPos()) <= UseDistance then
 			ply:ConCommand("UD_OpenCraftMenu " .. strStation)
 			return

@@ -25,7 +25,7 @@ concommand.Add("UD_Dev_SetTrade", function(ply, command, args)
 		tblMasters = {"master_" .. strTrade}
 	end
 	if #tblMasters == 0 then
-		ply:ChatPrint("Unknown trade: " .. strTrade .. " (use blacksmithing, leatherworking, tailoring or all)")
+		ply:ChatPrint("Unknown trade: " .. strTrade .. " (use blacksmithing, leatherworking, tailoring, mining or all)")
 		return
 	end
 	local intTier = math.Clamp(math.floor(tonumber(args[2]) or 1), 1, GAMEMODE.Combat.MaxTradeTier)

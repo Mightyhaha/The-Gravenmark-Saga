@@ -199,7 +199,7 @@ if SERVER then
 	function Player:SkillReset()
 		local intCost = GAMEMODE:GetSkillResetCost(self:GetLevel())
 		if not self:HasItem("money", intCost) then
-			self:CreateNotification("You need " .. intCost .. " coins to forget your training")
+			self:CreateNotification("You need " .. intCost .. " denars to forget your training")
 			return false
 		end
 		for strSkill in pairs(table.Copy(self.Data.Skills or {})) do

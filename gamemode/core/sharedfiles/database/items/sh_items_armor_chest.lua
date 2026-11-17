@@ -49,18 +49,6 @@ Item.Weight = 3
 Item.SellPrice = 2020
 Register.Item(Item)
 
-local Item = QuickCreateItemTable(BaseArmor, "armor_chest_cyborg", "Biomechanical Chest", "You will be assimilated!", "icons/junk_box1")
-Item = AddModel(Item, "models/Gibs/manhack_gib03.mdl", Vector(-3.9, -1.7, 0.8), Angle(-114.4, -10.5, 119.8))
-Item = AddModel(Item, "models/Gibs/manhack_gib03.mdl", Vector(0.1, 1, 4.6), Angle(-157.2, 158.6, 0))
-Item = AddModel(Item, "models/Gibs/manhack_gib02.mdl", Vector(10.4, -0.1, -0.8), Angle(162.6, -14.1, 12.7))
-Item = AddModel(Item, "models/Gibs/manhack_gib02.mdl", Vector(1.7, 9.9, -2.1), Angle(-18.1, -27.4, 0))
-Item = AddStats(Item, "slot_chest", 40)
-Item = AddBuff(Item, "stat_dexterity", 10)
-Item.Level = 20
-Item.Weight = 4
-Item.SellPrice = 8020
-Register.Item(Item)
-
 local Item = QuickCreateItemTable(BaseArmor, "armor_chest_antlion", "Antlion Shell Armor", "Crunchy!", "icons/junk_box1")
 Item = AddModel(Item, "models/Gibs/Antlion_gib_small_2.mdl", Vector(0.1, -4.1, 0.1), Angle(85, 67.6, 52.9))--front
 Item = AddModel(Item, "models/Gibs/Antlion_gib_small_2.mdl", Vector(0.8, -3, 2.1), Angle(-153.2, -0.7, 176))
@@ -95,21 +83,7 @@ Item.Weight = 7
 Item.SellPrice = 24156
 Register.Item(Item)
 
- local Item = QuickCreateItemTable(BaseArmor, "armor_chest_bio", "Chest Enhancers of the Overseer", "Created from light and durable metal, increases ranged combat", "icons/junk_box1")
-Item = AddModel(Item, "models/props_combine/tprotato2_chunk05.mdl", Vector(-3.3, 11.6, 16.4), Angle(19.4, -2, 147.9))--front
-Item = AddModel(Item, "models/Gibs/manhack_gib01.mdl", Vector(-3.9, 14, -8), Angle(-138.5, 135.8, 114.4))
-Item = AddModel(Item, "models/Gibs/manhack_gib01.mdl", Vector(-2.1, 21.1, 14), Angle(-142.5, 138.5, 34.1))
-Item = AddModel(Item, "models/props_combine/tprotato2_chunk05.mdl", Vector(-12.8, 27.7, 24.1), Angle(-47.5, -159.9, -81))--back
-Item = AddModel(Item, "models/Gibs/manhack_gib01.mdl", Vector(12.2, 19.3, 6.8), Angle(62.2, 131.8, -70.3))
-Item = AddModel(Item, "models/Gibs/manhack_gib01.mdl", Vector(6.8, -5.1, -12.8), Angle(40.8, 145.2, 52.9))
-Item = AddStats(Item, "slot_chest", 73)
-Item = AddBuff(Item, "stat_dexterity", 35)
-Item.Level = 42
-Item.Weight = 1
-Item.SellPrice = 26112
-Register.Item(Item)
-
- local Item = QuickCreateItemTable(BaseArmor, "armor_chest_tyrant", "Chest Armor of the Tyrant", "Made from the finest materials, for protection.", "icons/junk_box1")
+  local Item = QuickCreateItemTable(BaseArmor, "armor_chest_tyrant", "Chest Armor of the Tyrant", "Made from the finest materials, for protection.", "icons/junk_box1")
 Item = AddModel(Item, "models/props_combine/stalkerpod_lid.mdl", Vector(-4.6, -1.9, 1), Angle(50.2, 0.7, 7.4))--front
 Item = AddModel(Item, "models/props_combine/stalkerpod_lid.mdl", Vector(0.1, 4.3, 0.6), Angle(180, -178.7, 169.3))
 Item = AddModel(Item, "models/props_combine/stalkerpod_lid.mdl", Vector(-5.9, -1.9, 7.2), Angle(-82.3, 75.6, 105.1))

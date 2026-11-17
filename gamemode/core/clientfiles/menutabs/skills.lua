@@ -148,7 +148,7 @@ function PANEL:Init()
 	self.ResetButton = CreateGenericButton(self.Header, "Forget skills")
 	self.ResetButton.DoClick = function()
 		local intCost = GAMEMODE:GetSkillResetCost(LocalPlayer():GetLevel())
-		Derma_Query("Forget every skill and get all your points back for " .. intCost .. " coins?", "Forget skills", "Yes", function()
+		Derma_Query("Forget every skill and get all your points back for " .. intCost .. " denars?", "Forget skills", "Yes", function()
 			RunConsoleCommand("UD_ResetSkills")
 		end, "No")
 	end

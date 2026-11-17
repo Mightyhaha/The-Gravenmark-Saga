@@ -103,8 +103,8 @@ Register.NPC(NPC)
 
 local NPC = QuickNPC("quest_kleiner", "Dr. Kleiner", "npc_kleiner", "human")
 NPC = AddBool(NPC, false, true, true)
-NPC.Quest = {"quest_killcombinethumper", "quest_arsenalupgrade", "quest_killcombine",
-"quest_toolwrench", "quest_revolver", "quest_armorupgrade","quest_missionthors",
+NPC.Quest = {"quest_killcombinethumper", "quest_killcombine",
+"quest_toolwrench", "quest_armorupgrade","quest_missionthors",
 "quest_fortification","quest_oil", "quest_crafting",}
 NPC.DeathDistance = 14
 Register.NPC(NPC)

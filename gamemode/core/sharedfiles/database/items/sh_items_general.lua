@@ -1,4 +1,4 @@
-local Item = QuickCreateItemTable(BaseItem, "money", "Money", "It will bring you happy", "icons/item_cash")
+local Item = QuickCreateItemTable(BaseItem, "money", "Denar", "Silver denars, the coin of every market from Dunmarrow to Hallowgate.", "icons/item_cash")
 Item.Model = "models/props/cs_assault/Money.mdl"
 Item.Stackable = true
 Register.Item(Item)

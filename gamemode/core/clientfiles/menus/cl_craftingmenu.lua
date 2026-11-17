@@ -5,7 +5,7 @@ local TradeChoices = {
 	{"Tailoring", "master_tailoring"},
 }
 
-local GroupChoices = {"All items", "Weapons", "Armor", "Jewelry"}
+local GroupChoices = {"All items", "Weapons", "Armor", "Jewelry", "Smelting"}
 
 local ColorOk = Color(120, 210, 90, 255)
 local ColorBad = Color(235, 90, 70, 255)
@@ -109,7 +109,8 @@ local function OpenCraftMenu(plyCaller, strCommand, tblArgs)
 
 	local intTrade, strGroup, boolOnlyMakeable = 1, "All items", false
 	if tblArgs and tblArgs[1] == "smithing" then intTrade = 2 end
-	if tblArgs and tblArgs[1] == "workbench" then intTrade = 3 end
+	if tblArgs and tblArgs[1] == "leatherwork" then intTrade = 3 end
+	if tblArgs and tblArgs[1] == "tailoring" then intTrade = 4 end
 
 	local Top = vgui.Create("DPanel", Frame)
 	Top:Dock(TOP)
@@ -153,7 +154,7 @@ local function OpenCraftMenu(plyCaller, strCommand, tblArgs)
 	local Hint = vgui.Create("DLabel", Bottom)
 	Hint:Dock(FILL)
 	Hint:SetTextColor(White)
-	Hint:SetText("Pick a recipe. Materials come from enemy drops and shops. Trades level up as you craft.")
+	Hint:SetText("Pick a recipe. Metal comes from mining and smelting, leather and cloth from enemies. Trades level up as you craft.")
 
 	local List = vgui.Create("DListView", Frame)
 	List:Dock(LEFT)

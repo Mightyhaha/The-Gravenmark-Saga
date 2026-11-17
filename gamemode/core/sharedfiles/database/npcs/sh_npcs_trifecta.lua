@@ -30,8 +30,8 @@ local function AddMaterialDrops(Table)
 	for intBand = 1, intBands do
 		local intMin = intBand == 1 and 1 or (intBand - 1) * 20
 		local intMax = intBand == intBands and 150 or intBand * 20 - 1
-		for _, tblBands in pairs(GM.CraftMaterials) do
-			AddDrop(Table, tblBands[intBand], 25, 1, 2, intMin, intMax)
+		for strKind, tblBands in pairs(GM.CraftMaterials) do
+			if strKind ~= "metal" then AddDrop(Table, tblBands[intBand], 25, 1, 2, intMin, intMax) end
 		end
 	end
 	return Table
@@ -155,7 +155,7 @@ Register.NPC(NPC)
 
 local NPC = MorvaineMelee("morvaine_warden", "Morvaine Warden", 600, RedSide .. "harmesrouge00.mdl", {"weapon_melee_spear"})
 NPC = AddDrop(NPC, "money", 50, 10, 20)
-NPC = AddDrop(NPC, "item_smallammo_small", 20)
+NPC = AddDrop(NPC, "item_arrows", 20)
 NPC = AddDrop(NPC, "dm_morvaine_rations", 30)
 NPC = AddDrop(NPC, "trifecta_supplycrate", 40)
 NPC = AddDrop(NPC, "weapon_melee_spear", 2)
@@ -164,7 +164,7 @@ Register.NPC(NPC)
 
 local NPC = MorvaineMelee("morvaine_soldier", "Morvaine Soldier", 300, RedSideSet("fantassinrouge", 6), {"weapon_melee_sword", "armor_shield_round"})
 NPC = AddDrop(NPC, "money", 50, 25, 40)
-NPC = AddDrop(NPC, "item_smallammo_small", 20)
+NPC = AddDrop(NPC, "item_arrows", 20)
 NPC = AddDrop(NPC, "trifecta_supplycrate", 40)
 NPC = AddDrop(NPC, "weapon_melee_sword", 2)
 NPC = AddDrop(NPC, "armor_shield_buckler", 3)

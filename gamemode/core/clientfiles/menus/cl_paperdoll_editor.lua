@@ -11,7 +11,6 @@ Editor.Parts = {}
 Editor.Selected = nil
 Editor.Slot = nil
 Editor.Preview = {}
-Editor.HideWorn = true
 
 local PropGroups = {
 	{"Shapes", {
@@ -163,14 +162,42 @@ local function FromItemModel(Model)
 	return tblParts
 end
 
+local PreviewItem = "ud_armorbuilder_preview"
+
+local function ModelExists(strModel)
+	if not isstring(strModel) or strModel == "" then return false end
+	return util.IsValidModel(strModel) or file.Exists(strModel, "GAME")
+end
+
+hook.Remove("Think", "UD_PaperDollEditorHideWorn")
+hook.Remove("PreDrawOpaqueRenderables", "UD_PaperDollEditorPreview")
+hook.Remove("PostDrawOpaqueRenderables", "UD_PaperDollEditorPreview")
+
+local function SlotEntity(strSlot)
+	local tblEnts = GAMEMODE.PaperDollEnts and GAMEMODE.PaperDollEnts[LocalPlayer():SteamID64()]
+	return tblEnts and tblEnts[strSlot or ""]
+end
+
+local function RestoreSlot(strSlot)
+	local ply = LocalPlayer()
+	if not strSlot or not IsValid(ply) then return end
+	ply:PaperDollBuildSlot(strSlot, ply:GetSlot(strSlot))
+end
+
 local function RemovePreview()
-	for _, entPart in pairs(Editor.Preview) do
-		if IsValid(entPart) then entPart:Remove() end
-	end
+	RestoreSlot(Editor.PreviewSlot)
+	Editor.PreviewSlot = nil
+	Editor.PreviewSig = nil
 	Editor.Preview = {}
+	GAMEMODE.DataBase.Items[PreviewItem] = nil
+end
+
+local function RebuildPreview()
+	Editor.PreviewSig = nil
 end
 
 local function ApplyVisuals(entPart, Part)
+	entPart:SetNoDraw(false)
 	entPart:SetMaterial(Part.Material or "")
 	local Col = Part.Color or Color(255, 255, 255, 255)
 	entPart:SetColor(Color(Col.r, Col.g, Col.b, 255))
@@ -183,52 +210,47 @@ local function ApplyVisuals(entPart, Part)
 	end
 end
 
-local function RebuildPreview()
-	RemovePreview()
-	for Index, Part in ipairs(Editor.Parts) do
-		if util.IsValidModel(Part.Model or "") then
-			local entPart = ClientsideModel(Part.Model, RENDERGROUP_OPAQUE)
-			if IsValid(entPart) then
-				if Part.BoneMerge then
-					entPart:SetParent(LocalPlayer())
-					entPart:AddEffects(EF_BONEMERGE)
-				end
-				ApplyVisuals(entPart, Part)
-				Editor.Preview[Index] = entPart
-			end
-		end
-	end
-end
-
-local function SetWornVisible(boolVisible)
-	local tblEnts = GAMEMODE.PaperDollEnts and GAMEMODE.PaperDollEnts[LocalPlayer():SteamID64()]
-	for strSlot, entRoot in pairs(tblEnts or {}) do
-		if IsValid(entRoot) then
-			local boolHide = not boolVisible and strSlot == Editor.Slot
-			entRoot:SetNoDraw(boolHide)
-			for _, entKid in pairs(entRoot.Children or {}) do
-				if IsValid(entKid) then entKid:SetNoDraw(boolHide) end
-			end
-		end
-	end
-end
-
-hook.Add("PreDrawOpaqueRenderables", "UD_PaperDollEditorPreview", function()
+hook.Add("Think", "UD_PaperDollEditorPreview", function()
 	if not Editor.IsOpen or not Editor.Slot then return end
 	local ply = LocalPlayer()
-	if not IsValid(ply) then return end
-	SetWornVisible(not Editor.HideWorn)
-	local tblSlot = SlotTableOf(Editor.Slot)
-	if not tblSlot then return end
-	local vecSlot, angSlot = GAMEMODE:GetPaperDollSlotTransform(ply, tblSlot.Attachment)
-	if not vecSlot then return end
-	for Index, Part in ipairs(Editor.Parts) do
-		local entPart = Editor.Preview[Index]
-		if IsValid(entPart) and not Part.BoneMerge then
-			local vecLocal, angLocal = ToSlotSpace(Part)
-			local vecWorld, angWorld = LocalToWorld(vecLocal, angLocal, vecSlot, angSlot)
-			entPart:SetPos(vecWorld)
-			entPart:SetAngles(angWorld)
+	if not IsValid(ply) or not ply:Alive() then return end
+	if Editor.PreviewSlot and Editor.PreviewSlot ~= Editor.Slot then
+		RestoreSlot(Editor.PreviewSlot)
+		Editor.PreviewSlot = nil
+		Editor.PreviewSig = nil
+	end
+
+	local tblIndices, tblModel, tblSig = {}, {}, {}
+	for Index, Info in ipairs(ToItemModel()) do
+		if ModelExists(Info.Model) then
+			table.insert(tblIndices, Index)
+			table.insert(tblModel, Info)
+			table.insert(tblSig, string.lower(Info.Model) .. (Info.BoneMerge and "#bm" or ""))
+		end
+	end
+	local tblItem = GAMEMODE.DataBase.Items[PreviewItem] or {Name = PreviewItem, PrintName = "Armor Builder preview"}
+	tblItem.Model = tblModel
+	GAMEMODE.DataBase.Items[PreviewItem] = tblItem
+
+	local strSig = table.concat(tblSig, "|")
+	local entRoot = SlotEntity(Editor.Slot)
+	local boolWrong = (#tblModel > 0 and (not IsValid(entRoot) or entRoot.Item ~= PreviewItem)) or (#tblModel == 0 and IsValid(entRoot))
+	if strSig ~= Editor.PreviewSig or boolWrong then
+		ply:PaperDollBuildSlot(Editor.Slot, #tblModel > 0 and PreviewItem or nil)
+		Editor.PreviewSig = strSig
+		Editor.PreviewSlot = Editor.Slot
+		entRoot = SlotEntity(Editor.Slot)
+	end
+
+	Editor.Preview = {}
+	if not IsValid(entRoot) then return end
+	local tblEnts = {entRoot}
+	for _, entKid in ipairs(entRoot.Children or {}) do table.insert(tblEnts, entKid) end
+	for Number, Index in ipairs(tblIndices) do
+		local entPart = tblEnts[Number]
+		if IsValid(entPart) then
+			ApplyVisuals(entPart, Editor.Parts[Index])
+			Editor.Preview[Index] = entPart
 		end
 	end
 end)
@@ -354,7 +376,6 @@ function Editor.Open()
 	Editor.CurrentCamHeight = Editor.CurrentCamHeight or 0
 	Frame.OnClose = function()
 		Editor.IsOpen = false
-		SetWornVisible(true)
 		RemovePreview()
 		Editor.CurrentCamRotation = nil
 		Editor.CurrentCamDistance = nil
@@ -420,7 +441,6 @@ function Editor.Open()
 	end
 
 	local function SetSlot(strSlot)
-		SetWornVisible(true)
 		Editor.Slot = strSlot
 		local tblSlot = SlotTableOf(strSlot)
 		Controls.PosHeader:SetText(tblSlot and tblSlot.BodyAngle and "Position (forward / left / up)" or "Position (slot x / y / z)")
@@ -471,13 +491,6 @@ function Editor.Open()
 			Rebuild()
 		end},
 	})
-	local HideBox = vgui.Create("DCheckBoxLabel", Body)
-	HideBox:Dock(TOP)
-	HideBox:DockMargin(4, 2, 4, 2)
-	HideBox:SetText("Hide the worn item while editing")
-	HideBox:SetTextColor(Color(20, 20, 20))
-	HideBox:SetValue(Editor.HideWorn)
-	HideBox.OnChange = function(self, Value) Editor.HideWorn = Value end
 
 	AddHeader(Body, "Parts")
 	local List = vgui.Create("DListView", Body)
@@ -538,7 +551,7 @@ function Editor.Open()
 		local Part = SelectedPart()
 		local strModel = string.Trim(self:GetValue())
 		if not Part then return end
-		if not util.IsValidModel(strModel) then Notify("Model not found: " .. strModel) return end
+		if not ModelExists(strModel) then Notify("Model not found: " .. strModel) return end
 		Part.Model = strModel
 		Part.BoneMerge = nil
 		Rebuild()
@@ -552,7 +565,7 @@ function Editor.Open()
 		for _, Group in ipairs(PropGroups) do
 			local Sub = Menu:AddSubMenu(Group[1])
 			for _, Entry in ipairs(Group[2]) do
-				if util.IsValidModel(Entry[2]) then
+				if ModelExists(Entry[2]) then
 					Sub:AddOption(Entry[1], function()
 						ModelEntry:SetValue(Entry[2])
 						ModelEntry:OnEnter()
@@ -700,7 +713,7 @@ function Editor.Open()
 			print(strLua)
 			Notify("Copied " .. #Editor.Parts .. " AddModel lines (also printed in the console).")
 		end},
-		{"Try on worn item", function()
+		{"Apply to worn item", function()
 			local strItem = LocalPlayer().Data and LocalPlayer().Data.Paperdoll and LocalPlayer().Data.Paperdoll[Editor.Slot or ""]
 			local tblItem = strItem and ItemTable(strItem)
 			if not tblItem or #Editor.Parts == 0 then Notify("Wear an item in this slot first.") return end
@@ -737,7 +750,7 @@ concommand.Add("UD_Dev_EditPaperDoll", function() Editor.Open() end)
 concommand.Add("UD_Dev_EditPaperDoll_Debug", function()
 	local ply = LocalPlayer()
 	local strWorn = ply.Data and ply.Data.Paperdoll and ply.Data.Paperdoll[Editor.Slot or ""]
-	print("[Armor Builder] open:", Editor.IsOpen, "slot:", Editor.Slot, "hide worn:", Editor.HideWorn, "parts:", #Editor.Parts, "worn in slot:", strWorn)
+	print("[Armor Builder] open:", Editor.IsOpen, "slot:", Editor.Slot, "parts:", #Editor.Parts, "worn in slot:", strWorn)
 	local tblEnts = GAMEMODE.PaperDollEnts and GAMEMODE.PaperDollEnts[ply:SteamID64()] or {}
 	for strSlot, entRoot in pairs(tblEnts) do
 		if IsValid(entRoot) then

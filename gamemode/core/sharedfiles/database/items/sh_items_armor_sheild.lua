@@ -36,21 +36,6 @@ Item.Weight = 1
 Item.SellPrice = 631
 Register.Item(Item)
 
-local Item = QuickCreateItemTable(BaseArmor, "armor_shield_metacarbon", "Heavy Meta-Carbon Shield", "Protects", "icons/armor_carbonsheild")
-Item = AddModel(Item, "models/Gibs/gunship_gibs_eye.mdl", Vector(-5.9, 4.8, 7.5), Angle(-40.8, -2, -6))
-Item = AddStats(Item, "slot_offhand", 33)
-Item.Level = 9
-Item.Weight = 3
-Item.SellPrice = 883
-Register.Item(Item)
-
-
-local Item = QuickCreateItemTable(BaseArmor, "armor_shield_heavycomposite", "Heavy Composite Shield", "Protects", "icons/junk_metalcan2")
-Item = AddModel(Item, "models/Gibs/Strider_Gib6.mdl", Vector(-26.9, -11.7, -15.3), Angle(-143.9, -89, -8.7))
-Item = AddStats(Item, "slot_offhand", 40)
-Item.Weight = 3
-Item.SellPrice = 1010
-Register.Item(Item)
 
 local Item = QuickCreateItemTable(BaseArmor, "armor_shield_imprvsaw", "The Mutilator", "Offensive Shield", "icons/junk_sawblade")
 Item = AddModel(Item, "models/props_junk/sawblade001a.mdl", Vector(1.2, 8.4, 3), Angle(101, -55.5, -135.8))

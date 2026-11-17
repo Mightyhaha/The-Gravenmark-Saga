@@ -16,11 +16,17 @@ GM.CraftingStations = {
 		"models/props/cs_italy/it_mkt_table1.mdl",
 		"models/props/cs_italy/it_mkt_table3.mdl",
 	},
+	tailoring = {},
+	leatherwork = {},
 }
 
-GM.CraftingStationNames = {smithing = "an anvil or forge", workbench = "a workbench"}
+GM.CraftingStationNames = {smithing = "an anvil or forge", workbench = "a workbench", tailoring = "a tailoring table", leatherwork = "a leatherworking bench"}
 
-function GM:GetStationOf(strModel)
+function GM:GetStationOf(strModel, entStation)
+	if IsValid(entStation) then
+		local strTagged = entStation:GetNWString("UD_Station", "")
+		if strTagged ~= "" then return strTagged end
+	end
 	strModel = string.lower(strModel or "")
 	for strStation, tblModels in pairs(self.CraftingStations) do
 		if table.HasValue(tblModels, strModel) then return strStation end
@@ -48,7 +54,7 @@ function Player:IsNearStation(strStation)
 	if tblCached and tblCached.Time > CurTime() - 0.5 then return tblCached.Near end
 	local boolNear = false
 	for _, entNear in ipairs(ents.FindInSphere(self:GetPos(), GAMEMODE.CraftingStationRange)) do
-		if table.HasValue(tblModels, string.lower(entNear:GetModel() or "")) then
+		if entNear:GetNWString("UD_Station", "") == strStation or table.HasValue(tblModels, string.lower(entNear:GetModel() or "")) then
 			boolNear = true
 			break
 		end

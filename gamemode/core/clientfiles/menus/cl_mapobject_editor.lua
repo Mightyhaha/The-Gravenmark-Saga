@@ -2,6 +2,9 @@ GM.MapEditor = {}
 local Editor = GM.MapEditor
 
 Editor.Models = {
+	"station:forge",
+	"station:tailoring",
+	"station:leatherwork",
 	"models/props/furnitures/humans/chests/poor_chest_01.mdl",
 	"models/props/furnitures/humans/chests/big_chest_metal01_dirty.mdl",
 	"models/props/furnitures/humans/chests/big_chest_metal_cov01.mdl",
@@ -66,7 +69,7 @@ local ColorPending = Color(80, 255, 80, 255)
 local ColorMoving = Color(80, 200, 255, 255)
 local ColorPlayerSpawn = Color(120, 170, 255, 220)
 local ColorOutline = Color(0, 0, 0, 255)
-local ModeNouns = {npc = "spawn point", prop = "prop", player = "player spawn"}
+local ModeNouns = {npc = "spawn point", prop = "prop", player = "player spawn", ore = "ore vein"}
 
 Editor.Mode = "npc"
 Editor.Pending = nil
@@ -74,13 +77,14 @@ Editor.SelectedKey = nil
 Editor.Edit = nil
 Editor.Moving = false
 Editor.Dirty = false
-Editor.Settings = {NPC = nil, Level = 5, SpawnTime = 30, Radius = 0, Count = 1, Yaw = 0, Model = Editor.Models[1]}
+Editor.Settings = {NPC = nil, Level = 5, SpawnTime = 30, Radius = 0, Count = 1, Yaw = 0, Model = Editor.Models[1], Ore = "bogiron", OreRespawn = 180, OreModel = nil}
 
 local Rebuild
 
 local function ObjectList()
 	if Editor.Mode == "npc" then return GAMEMODE.MapEntities.NPCSpawnPoints end
 	if Editor.Mode == "player" then return GAMEMODE.MapEntities.PlayerSpawns end
+	if Editor.Mode == "ore" then return GAMEMODE.MapEntities.OreVeins end
 	return GAMEMODE.MapEntities.WorldProps
 end
 
@@ -110,7 +114,7 @@ local function StatusText()
 	else
 		Status = "Left-click the ground to place a " .. Noun .. ", or click a marker to edit it."
 	end
-	local Counts = #GAMEMODE.MapEntities.NPCSpawnPoints .. " NPC spawns, " .. #GAMEMODE.MapEntities.WorldProps .. " props, " .. #GAMEMODE.MapEntities.PlayerSpawns .. " player spawns"
+	local Counts = #GAMEMODE.MapEntities.NPCSpawnPoints .. " NPC spawns, " .. #GAMEMODE.MapEntities.WorldProps .. " props, " .. #GAMEMODE.MapEntities.PlayerSpawns .. " player spawns, " .. #GAMEMODE.MapEntities.OreVeins .. " ore veins"
 	if Editor.Dirty then Counts = Counts .. "  -  unsaved changes" end
 	local Mouse = Editor.CursorEnabled and "Mouse: ON (press C to look around)" or "Mouse: OFF (press C to use this window)"
 	return Status .. "\n" .. Counts .. "\n" .. Mouse
@@ -184,6 +188,8 @@ local function Select(Key)
 		Editor.Edit = {NPC = Object.NPC, Level = Object.Level or 5, SpawnTime = Object.SpawnTime or 30, Radius = Object.Radius or 0, Count = Object.Count or 1, Yaw = Yaw}
 	elseif Editor.Mode == "player" then
 		Editor.Edit = {Yaw = Yaw}
+	elseif Editor.Mode == "ore" then
+		Editor.Edit = {Ore = Object.Ore, OreRespawn = Object.SpawnTime or 180, OreModel = Object.Model, Yaw = Yaw}
 	else
 		Editor.Edit = {Model = Object.Model, Yaw = Yaw}
 	end
@@ -257,22 +263,27 @@ local function BuildPropControls(Body, Values)
 	Grid:DockMargin(0, 0, 0, 4)
 	Grid:SetSpaceX(2)
 	Grid:SetSpaceY(2)
-	if not util.IsValidModel(Values.Model or "") then
+	local function ValidChoice(strModel)
+		return util.IsValidModel(GAMEMODE:ResolvePropModel(strModel or ""))
+	end
+	if not ValidChoice(Values.Model) then
 		for _, Model in ipairs(Editor.Models) do
-			if util.IsValidModel(Model) then
+			if ValidChoice(Model) then
 				Values.Model = Model
 				break
 			end
 		end
 	end
 	for _, Model in ipairs(Editor.Models) do
-		if not util.IsValidModel(Model) then continue end
+		if not ValidChoice(Model) then continue end
+		local tblBuild = GAMEMODE:GetStationBuild(Model)
 		local Icon = Grid:Add("SpawnIcon")
 		Icon:SetSize(52, 52)
-		Icon:SetModel(Model)
-		Icon:SetTooltip(Model)
+		Icon:SetModel(GAMEMODE:ResolvePropModel(Model))
+		Icon:SetTooltip(tblBuild and (tblBuild.PrintName .. " (crafting station: " .. (GAMEMODE.CraftingStationNames[tblBuild.Station] or tblBuild.Station) .. ")") or Model)
 		Icon.DoClick = function() Values.Model = Model end
 		Icon.PaintOver = function(_, w, h)
+			if tblBuild then draw.SimpleTextOutlined(tblBuild.PrintName, "DefaultSmall", w / 2, h - 2, ColorSelected, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM, 1, ColorOutline) end
 			if string.lower(Values.Model or "") ~= string.lower(Model) then return end
 			surface.SetDrawColor(ColorSelected)
 			surface.DrawOutlinedRect(0, 0, w, h, 2)
@@ -339,6 +350,72 @@ local function BuildPlayerSpawnControls(Body, Values)
 	end
 end
 
+local function OreColor(strOre)
+	local Ore = GAMEMODE:GetOreType(strOre)
+	if not Ore then return ColorPlaced end
+	return Color(math.max(Ore.Tint.r, 90), math.max(Ore.Tint.g, 90), math.max(Ore.Tint.b, 90), 230)
+end
+
+local function BuildOreControls(Body, Values)
+	AddLabel(Body, "Players press E on a vein to mine it. A mined vein disappears and grows back after the respawn time.")
+	local OreBox = vgui.Create("DComboBox", Body)
+	OreBox:Dock(TOP)
+	OreBox:DockMargin(0, 0, 0, 4)
+	for _, Ore in ipairs(GAMEMODE.OreTypes or {}) do
+		OreBox:AddChoice(Ore.PrintName .. "  (Mining tier " .. Ore.MiningTier .. ", level " .. Ore.Level .. "+)", Ore.Key, Ore.Key == Values.Ore)
+	end
+	OreBox.OnSelect = function(_, _, _, Data) Values.Ore = Data end
+
+	if not GAMEMODE:IsOreVeinModel(Values.OreModel) then Values.OreModel = GAMEMODE:DefaultOreVeinModel() end
+	local Grid = vgui.Create("DIconLayout", Body)
+	Grid:Dock(TOP)
+	Grid:DockMargin(0, 0, 0, 4)
+	Grid:SetSpaceX(2)
+	Grid:SetSpaceY(2)
+	for _, Model in ipairs(GAMEMODE.OreVeinModels) do
+		if not util.IsValidModel(Model) then continue end
+		local Icon = Grid:Add("SpawnIcon")
+		Icon:SetSize(52, 52)
+		Icon:SetModel(Model)
+		Icon:SetTooltip(Model)
+		Icon.DoClick = function() Values.OreModel = Model end
+		Icon.PaintOver = function(_, w, h)
+			if string.lower(Values.OreModel or "") ~= string.lower(Model) then return end
+			surface.SetDrawColor(ColorSelected)
+			surface.DrawOutlinedRect(0, 0, w, h, 2)
+		end
+	end
+
+	AddSlider(Body, "Respawn (seconds)", 10, 3600, Values.OreRespawn, function(Value) Values.OreRespawn = Value end)
+	AddSlider(Body, "Facing", -180, 180, Values.Yaw, function(Value) Values.Yaw = Value end)
+
+	if Editor.SelectedKey then
+		local Key = Editor.SelectedKey
+		AddButton(Body, "Apply changes", function()
+			SendCommand("UD_Dev_EditMap_UpdateOreVein", Key, Values.Ore, Values.OreRespawn, Values.Yaw, Values.OreModel)
+			UpdateStatus()
+		end)
+		AddButton(Body, "Move to a new spot", function()
+			Editor.Moving = true
+			UpdateStatus()
+		end)
+		AddButton(Body, "Remove", function()
+			SendCommand("UD_Dev_EditMap_RemoveOreVein", Key)
+			Deselect()
+		end)
+		AddButton(Body, "Deselect", Deselect)
+	else
+		AddButton(Body, "Add ore vein", function()
+			if not Editor.Pending or not Values.Ore then return end
+			local x, y, z = PositionArgs(Editor.Pending.Position)
+			SendCommand("UD_Dev_EditMap_AddOreVein", x, y, z, Values.Yaw, Values.Ore, Values.OreRespawn, Values.OreModel)
+			Editor.Pending = nil
+			Rebuild()
+		end)
+		AddButton(Body, "Cancel", Cancel)
+	end
+end
+
 Rebuild = function()
 	if not IsValid(Editor.Frame) then return end
 	UpdateStatus()
@@ -352,6 +429,8 @@ Rebuild = function()
 		BuildSpawnControls(Body, CurrentValues())
 	elseif Editor.Mode == "player" then
 		BuildPlayerSpawnControls(Body, CurrentValues())
+	elseif Editor.Mode == "ore" then
+		BuildOreControls(Body, CurrentValues())
 	else
 		BuildPropControls(Body, CurrentValues())
 	end
@@ -392,7 +471,7 @@ local function HandleWorldClick(Trace)
 	if not Trace or not Trace.Hit then return end
 	if Editor.Moving and Editor.SelectedKey then
 		local x, y, z = PositionArgs(Trace.HitPos)
-		local MoveCommands = {npc = "UD_Dev_EditMap_MoveSpawnPoint", prop = "UD_Dev_EditMap_MoveWorldProp", player = "UD_Dev_EditMap_MovePlayerSpawn"}
+		local MoveCommands = {npc = "UD_Dev_EditMap_MoveSpawnPoint", prop = "UD_Dev_EditMap_MoveWorldProp", player = "UD_Dev_EditMap_MovePlayerSpawn", ore = "UD_Dev_EditMap_MoveOreVein"}
 		SendCommand(MoveCommands[Editor.Mode], Editor.SelectedKey, x, y, z)
 		Editor.Moving = false
 		UpdateStatus()
@@ -403,6 +482,8 @@ local function HandleWorldClick(Trace)
 		Key = FindSpawnPointAt(Trace.HitPos, GAMEMODE.MapEntities.NPCSpawnPoints)
 	elseif Editor.Mode == "player" then
 		Key = FindSpawnPointAt(Trace.HitPos, GAMEMODE.MapEntities.PlayerSpawns)
+	elseif Editor.Mode == "ore" then
+		Key = FindSpawnPointAt(Trace.HitPos, GAMEMODE.MapEntities.OreVeins)
 	else
 		Key = FindWorldPropAt(Trace)
 	end
@@ -459,6 +540,7 @@ function Editor.Open()
 	ModeBox:AddChoice("NPC spawn points", "npc", Editor.Mode == "npc")
 	ModeBox:AddChoice("Props", "prop", Editor.Mode == "prop")
 	ModeBox:AddChoice("Player spawns", "player", Editor.Mode == "player")
+	ModeBox:AddChoice("Ore veins", "ore", Editor.Mode == "ore")
 	ModeBox.OnSelect = function(_, _, _, Data)
 		Editor.Mode = Data
 		Editor.Pending = nil
@@ -592,6 +674,15 @@ hook.Add("PostDrawTranslucentRenderables", "UD_MapEditorMarkers", function(Drawi
 			end
 		end
 		if Editor.Pending then DrawSpawnMarker(Editor.Pending.Position, {Yaw = Editor.Settings.Yaw}, ColorPending) end
+	elseif Editor.Mode == "ore" then
+		for Key, Vein in ipairs(GAMEMODE.MapEntities.OreVeins) do
+			if Key == Editor.SelectedKey then
+				DrawSpawnMarker(Vein.Position, {Radius = 30, Yaw = Editor.Edit and Editor.Edit.Yaw}, Editor.Moving and ColorMoving or ColorSelected)
+			else
+				DrawSpawnMarker(Vein.Position, {Radius = 30, Yaw = Vein.Angle and Vein.Angle.y}, OreColor(Vein.Ore))
+			end
+		end
+		if Editor.Pending then DrawSpawnMarker(Editor.Pending.Position, {Radius = 30, Yaw = Editor.Settings.Yaw}, ColorPending) end
 	else
 		for Key, Prop in ipairs(GAMEMODE.MapEntities.WorldProps) do
 			local PropEntity = Entity(Prop.EntIndex or -1)
@@ -631,6 +722,13 @@ hook.Add("HUDPaint", "UD_MapEditorLabels", function()
 			DrawLabel(Spawn.Position, "Player spawn #" .. Key, Key == Editor.SelectedKey and ColorSelected or ColorPlayerSpawn)
 		end
 		if Editor.Pending then DrawLabel(Editor.Pending.Position, "New player spawn", ColorPending) end
+	elseif Editor.Mode == "ore" then
+		for Key, Vein in ipairs(GAMEMODE.MapEntities.OreVeins) do
+			local Ore = GAMEMODE:GetOreType(Vein.Ore)
+			local Text = "#" .. Key .. "  " .. (Ore and Ore.PrintName or Vein.Ore) .. " vein  respawn " .. (Vein.SpawnTime or 180) .. "s"
+			DrawLabel(Vein.Position, Text, Key == Editor.SelectedKey and ColorSelected or OreColor(Vein.Ore))
+		end
+		if Editor.Pending then DrawLabel(Editor.Pending.Position, "New ore vein", ColorPending) end
 	else
 		for Key, Prop in ipairs(GAMEMODE.MapEntities.WorldProps) do
 			DrawLabel(Prop.Position, "#" .. Key .. "  " .. string.GetFileFromFilename(Prop.Model or ""), Key == Editor.SelectedKey and ColorSelected or White)

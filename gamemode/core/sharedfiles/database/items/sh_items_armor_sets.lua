@@ -17,18 +17,6 @@ AddBuff(EquipmentSet, "stat_strength", 2)
 Register.EquipmentSet(EquipmentSet)
 
 local EquipmentSet = {}
-EquipmentSet.Name = "armor_cyborg"
-EquipmentSet.PrintName = "Biomechanical Being"
-EquipmentSet.Items = {}
-EquipmentSet.Items[1] = "armor_chest_cyborg"
-EquipmentSet.Items[2] = "armor_helm_cyborg"
-EquipmentSet.Items[3] = "armor_shoulder_cyborg"
-EquipmentSet.Items[4] = "armor_belt_cyborg"
-AddBuff(EquipmentSet, "stat_dexterity", 5)
-AddBuff(EquipmentSet, "stat_agility", 3)
-Register.EquipmentSet(EquipmentSet)
-
-local EquipmentSet = {}
 EquipmentSet.Name = "twisted_souls"
 EquipmentSet.PrintName = "Twisted Souls"
 EquipmentSet.Items = {}
@@ -68,16 +56,4 @@ EquipmentSet.Items[2] = "armor_helm_tyrant"
 EquipmentSet.Items[3] = "armor_shoulder_tyrant"
 EquipmentSet.Items[4] = "armor_belt_tyrant"
 AddBuff(EquipmentSet, "stat_maxhealth", 250)
-Register.EquipmentSet(EquipmentSet)
-
-local EquipmentSet = {}
-EquipmentSet.Name = "overseer"
-EquipmentSet.PrintName = "The Overseer"
-EquipmentSet.Items = {}
-EquipmentSet.Items[1] = "armor_chest_bio"
-EquipmentSet.Items[2] = "armor_helm_bio"
-EquipmentSet.Items[3] = "armor_shoulder_bio"
-EquipmentSet.Items[4] = "armor_belt_bio"
-AddBuff(EquipmentSet, "stat_dexterity", 30)
-AddBuff(EquipmentSet, "stat_maxhealth", 50)
 Register.EquipmentSet(EquipmentSet)

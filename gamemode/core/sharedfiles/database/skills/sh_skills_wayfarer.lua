@@ -59,7 +59,7 @@ RegisterSkill(Skill)
 
 local LightFingers = {10, 20, 30}
 local Skill = CreateSkill("skill_way_lightfingers", "Light Fingers", Branch, 8, 3, "icon16/coins.png", "The dead do not need their coin. The rebellion does.", "skill_way_haggler")
-SetSkillDesc(Skill, function(Rank) return "Enemies drop " .. LightFingers[Rank] .. "% more coin" end)
+SetSkillDesc(Skill, function(Rank) return "Enemies drop " .. LightFingers[Rank] .. "% more denars" end)
 Skill.Hooks.drop_mod = function(ply, Rank, strItem, tblInfo)
 	if strItem == "money" and tblInfo then
 		tblInfo = table.Copy(tblInfo)

@@ -4,29 +4,12 @@ function Player:NewGame()
 	-- TODO: config?
 	self:SetNWInt("exp", 0)
 	self:AddItem("money", 100)
-	self:AddItem("item_smallammo_small", 3)
 	self:AddItem("item_healthkit", 2)
 	self:AddItem("weapon_melee_rustysword", 1)
 	self:AddItem("item_bedroll", 1)
 	self:AddItem("food_ryebread", 3)
-	self:AddItem("weapon_ranged_junkpistol", 1)
-	--[[
-	self:AddItem("item_canspoilingmeat", 1)
-	self:AddItem("weapon_melee_fryingpan", 1)
-	self:AddItem("weapon_melee_cleaver", 1)
-	self:AddItem("weapon_melee_leadpipe", 1)
-	self:AddItem("weapon_melee_circularsaw", 1)
-	self:AddItem("weapon_melee_wrench", 1)
-	self:AddItem("weapon_melee_knife", 1)
-	self:AddItem("weapon_ranged_heavymacgun", 1)
-	self:AddItem("weapon_ranged_junksmg", 1)
-	self:AddItem("armor_helm_chefshat", 1)
-	self:AddItem("armor_helm_junkhelmet", 1)
-	self:AddItem("armor_helm_scannergoggles", 1)
-	self:AddItem("armor_chest_junkarmor", 1)
-	self:AddItem("armor_sheild_cog", 1)
-	self:AddItem("armor_sheild_saw", 1)
-	]]
+	self:AddItem("weapon_ranged_huntingbow", 1)
+	self:AddItem("item_arrows", 2)
 	self:SaveGame()
 end
 
@@ -77,12 +60,23 @@ function Player:LoadGame()
 			self.Data.Model = savedGameData.Model or "models/player/Group01/male_02.mdl"
 			self:SetModel(savedGameData.Model or "models/player/Group01/male_02.mdl")
 
+			local intRefund = UD_CleanRemovedItems(savedGameData.Inventory) + UD_CleanRemovedItems(savedGameData.Bank)
 			self:GiveItems(savedGameData.Inventory)
+			if intRefund > 0 then
+				self:AddItem("money", intRefund)
+				self:ChatPrint("Some of your old gear no longer exists in this world. You were paid " .. intRefund .. " denars for it.")
+			end
 
 			for Item, Amount in pairs(savedGameData.Bank or {}) do self:AddItemToBank(Item, Amount) end
-			for slot, item in pairs(savedGameData.Paperdoll or {}) do self:UseItem(item, slot) end
-			for Quest, Info in pairs(savedGameData.Quests or {}) do self:UpdateQuest(Quest, Info) end
-			for Book, boolRead in pairs(savedGameData.Library or {}) do self:AddBookToLibrary(Book) end
+			for slot, item in pairs(savedGameData.Paperdoll or {}) do
+				if ItemTable(item) then self:UseItem(item, slot) end
+			end
+			for Quest, Info in pairs(savedGameData.Quests or {}) do
+				if QuestTable(Quest) then self:UpdateQuest(Quest, Info) end
+			end
+			for Book, boolRead in pairs(savedGameData.Library or {}) do
+				if ItemTable(Book) then self:AddBookToLibrary(Book) end
+			end
 			for Master, intExp in pairs(savedGameData.Masters or {}) do self:SetMaster(Master, intExp) end
 		else
 			self:NewGame()
@@ -103,6 +97,17 @@ function Player:LoadGame()
 			end
 		end
 	end
+end
+
+function UD_CleanRemovedItems(tblItems)
+	local intRefund = 0
+	for strItem, intAmount in pairs(tblItems or {}) do
+		if not ItemTable(strItem) then
+			intRefund = intRefund + (GAMEMODE.RemovedItemValues[strItem] or 0) * math.max(tonumber(intAmount) or 0, 0)
+			tblItems[strItem] = nil
+		end
+	end
+	return math.Round(intRefund)
 end
 
 function Player:GetSaveFileName(SubFolder)

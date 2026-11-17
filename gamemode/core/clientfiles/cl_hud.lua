@@ -240,7 +240,7 @@ function GM:DrawAmmoBar()
 	self.AmmoBar:SetDimensions(3, self.HealthBar.Size.Height + self.LevelBar.Size.Height + 9, self.PlayerBox.Size.Width - 6, 15)
 	self.AmmoBar:SetStyle(4, BarColor)
 	self.AmmoBar:SetValue(CurrentClip, WeaponTable.ClipSize or 1)
-	self.AmmoBar:SetText("UiBold", "Ammo " .. CurrentClip .. "  " .. LocalPlayer():GetAmmoCount(AmmoType), DrakGray)
+	self.AmmoBar:SetText("UiBold", (AmmoType == "ud_bolt" and "Bolts " or "Arrows ") .. CurrentClip .. "  " .. LocalPlayer():GetAmmoCount(AmmoType), DrakGray)
 	jdraw.DrawProgressBar(self.AmmoBar)
 end
 

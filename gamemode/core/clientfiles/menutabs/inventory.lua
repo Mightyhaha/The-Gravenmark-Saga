@@ -6,10 +6,8 @@ PANEL.ItemIconSize = 39
 PANEL.ItemRow = 7
 
 PANEL.AmmoDisplayTable = {}
-PANEL.AmmoDisplayTable[1] = {Type = "smg1", PrintName = "Small"}
-PANEL.AmmoDisplayTable[2] = {Type = "ar2", PrintName = "Rifle"}
-PANEL.AmmoDisplayTable[3] = {Type = "buckshot", PrintName = "Buckshot"}
-PANEL.AmmoDisplayTable[4] = {Type = "SniperRound", PrintName = "Sniper"}
+PANEL.AmmoDisplayTable[1] = {Type = "ud_arrow", PrintName = "Arrows"}
+PANEL.AmmoDisplayTable[2] = {Type = "ud_bolt", PrintName = "Bolts"}
 
 function PANEL:Init()
 	self.inventorylist = CreateGenericList(self, self.ItemIconPadding, true, true)

@@ -27,14 +27,28 @@ GM.Combat = {
 	CraftValueShare = 0.5,
 	CraftUnitsAtBandTop = 10,
 	MaxTradeTier = 15,
+	ShopGearMaxLevel = 20,
+	ShopMaterialMaxBand = 2,
 }
 
 GM.WeaponClasses = {
 	sword = {PrintName = "Sword", FireRate = 1.7, Output = 1, HoldType = "melee"},
 	axe = {PrintName = "Axe", FireRate = 1.4, Output = 1, CritBonus = 0.1, HoldType = "melee"},
-	spear = {PrintName = "Spear", FireRate = 1.2, Output = 0.95, Range = 95, HoldType = "melee2"},
+	spear = {PrintName = "Spear", FireRate = 1.2, Output = 0.95, Range = 95, HoldType = "melee"},
 	hammer = {PrintName = "Hammer", FireRate = 0.9, Output = 1.05, HoldType = "melee"},
+	bow = {PrintName = "Bow", FireRate = 2, ReloadTime = 0.5, Output = 0.85, HoldType = "pistol", AmmoType = "ud_arrow", ClipSize = 1, Accuracy = 0.015, Sound = "weapons/iceaxe/iceaxe_swing1.wav", ReloadSound = "weapons/crossbow/bolt_skewer1.wav"},
+	crossbow = {PrintName = "Crossbow", FireRate = 2, ReloadTime = 1.5, Output = 0.9, HoldType = "crossbow", AmmoType = "ud_bolt", ClipSize = 1, Accuracy = 0.004, Sound = "weapons/crossbow/fire1.wav", ReloadSound = "weapons/crossbow/bolt_load1.wav"},
 }
+
+for _, Class in pairs(GM.WeaponClasses) do
+	if Class.AmmoType then game.AddAmmoType({name = Class.AmmoType, dmgtype = DMG_BULLET, tracer = TRACER_LINE, maxcarry = 9999}) end
+end
+
+function GM:GetWeaponCycleRate(strClass)
+	local Class = self.WeaponClasses[strClass]
+	if not Class.ReloadTime then return Class.FireRate end
+	return 1 / (1 / Class.FireRate + Class.ReloadTime)
+end
 
 GM.SlotUnlockLevel = {
 	slot_primaryweapon = 1,
@@ -134,7 +148,7 @@ function GM:GetWeaponTierPower(strClass, intLevel)
 	local Offset = math.min(self.Combat.WeaponTierHalfGap, intLevel)
 	local Crit = 1 + self.Combat.BaseCritChance
 	local Reference = self:GetExpectedWeaponPower(intLevel + Offset) * self.Combat.ReferenceFireRate * Crit
-	return math.max(math.Round(Reference * Class.Output / (Class.FireRate * (Crit + (Class.CritBonus or 0)))), 1)
+	return math.max(math.Round(Reference * Class.Output / (self:GetWeaponCycleRate(strClass) * (Crit + (Class.CritBonus or 0)))), 1)
 end
 
 function GM:GetRawArmorTierValue(strSlot, intLevel)

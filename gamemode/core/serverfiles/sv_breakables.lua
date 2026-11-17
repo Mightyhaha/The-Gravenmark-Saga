@@ -5,9 +5,8 @@ local function AddItem(Model, Item, Chance, Min, Max)
 end
 AddItem("models/props_junk/wood_crate001a.mdl", "wood", 80, 1, 3)
 AddItem("models/props_junk/wood_crate002a.mdl", "wood", 80, 1, 3)
-AddItem("models/props_junk/wood_crate002a.mdl", "item_smallammo_small", 10)
-AddItem("models/props_junk/wood_crate002a.mdl", "item_rifleammo_small", 10)
-AddItem("models/props_junk/wood_crate002a.mdl", "item_buckshotammo_small", 10)
+AddItem("models/props_junk/wood_crate002a.mdl", "item_arrows", 10)
+AddItem("models/props_junk/wood_crate002a.mdl", "item_bolts", 10)
 AddItem("models/props_junk/wood_crate002a.mdl", "item_canmeat", 30)
 
 local function PropAdjustDamage(entVictim, DamageInfo)

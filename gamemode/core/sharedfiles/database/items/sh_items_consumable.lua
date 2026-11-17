@@ -49,16 +49,6 @@ Item.Weight = 1
 Item.Stackable = true
 Register.Item(Item)
 
-local Item = QuickCreateItemTable(BaseFood, "item_antivirus", "Anti Virus", "An antivirus that can heal wounds.", "icons/item_antivirus")
-Item = AddHealth(Item, 40, 10)
-Item.Model = "models/healthvial.mdl"
-Item.QuestNeeded = "quest_zombieblood"
-Item.Message = "You have taken an antivirus"
-Item.UseSound = "items/smallmedkit1.wav"
-Item.SellPrice = 30
-Item.Weight = 1
-Register.Item(Item)
-
 local Item = QuickCreateItemTable(BaseFood, "item_banannabunch", "Banana Bunch", "Restores your health by 75 over 20 Seconds", "icons/food_bananna_bunch")
 Item = AddHealth(Item, 75, 20)
 Item.Model = "models/props/cs_italy/bananna_bunch.mdl"
@@ -89,38 +79,6 @@ Item.SellPrice = 150
 Item.Weight = 1
 Register.Item(Item)
 
-
-local Item = QuickCreateItemTable(BaseAmmo, "item_smallammo_small", "Small Rounds", "35 Small bullets", "icons/item_pistolammobox")
-Item = AddAmmo(Item, 35, "smg1")
-Item.Model = "models/Items/357ammobox.mdl"
-Item.Stackable = true
-Item.SellPrice = 2
-Item.Weight = 1
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseAmmo, "item_rifleammo_small", "Rifle Rounds", "50 Rifle bullets", "icons/item_rifleammo")
-Item = AddAmmo(Item, 50, "ar2")
-Item.Model = "models/Items/BoxSRounds.mdl"
-Item.Stackable = true
-Item.SellPrice = 3
-Item.Weight = 1
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseAmmo, "item_buckshotammo_small", "Buckshot", "20 Buckshot shells", "icons/item_buckshot")
-Item = AddAmmo(Item, 20, "buckshot")
-Item.Model = "models/Items/BoxBuckshot.mdl"
-Item.Stackable = true
-Item.SellPrice = 3
-Item.Weight = 1
-Register.Item(Item)
-
-local Item = QuickCreateItemTable(BaseAmmo, "item_sniperammo_small", "SniperRound", "8 Sniper Round", "icons/item_buckshot")
-Item = AddAmmo(Item, 8, "SniperRound")
-Item.Model = "models/Items/BoxBuckshot.mdl"
-Item.Stackable = true
-Item.SellPrice = 8
-Item.Weight = 1
-Register.Item(Item)
 
 
 --More ZCOM stuff I want these to have icons before we add them to game

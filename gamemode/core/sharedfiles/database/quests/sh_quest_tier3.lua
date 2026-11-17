@@ -1,19 +1,4 @@
 local Quest = {}
-Quest.Name = "quest_arsenalupgrade"
-Quest.PrintName = "Arsenal Upgrade"
-Quest.Story = "Ah, I see you're still lugging around that dinky little pistol.. Here, I'll tell you what. If you collect the materials, I'll upgrade it for you."
-Quest.Level = 13
-Quest.ObtainItems = {}
-Quest.ObtainItems["weapon_ranged_junkpistol"] = 1
-Quest.ObtainItems["item_canspoilingmeat"] = 5
-Quest.ObtainItems["weapon_melee_wrench"] = 1
-Quest.ObtainItems["wood"] = 3
-Quest.GainedExp = 180
-Quest.GainedItems = {}
-Quest.GainedItems["weapon_ranged_drumshotgun"] = 1
-Register.Quest(Quest)
-
-local Quest = {}
 Quest.Name = "quest_killantlion"
 Quest.PrintName = "Kill Antlions"
 Quest.Story = "Dem antlions are estn meh flowers. Kill em all please, before they get to the vegtable garden."
@@ -51,21 +36,6 @@ Quest.ObtainItems["money"] = 2000
 Quest.GainedExp = 250
 Quest.GainedItems = {}
 Quest.GainedItems["armor_chest_refinedjunkarmor"] = 1
-Register.Quest(Quest)
-
-local Quest = {}
-Quest.Name = "quest_revolver"
-Quest.PrintName = "An offer you can't refuse"
-Quest.Story = "Tell you what, I'll make a deal with you. I found this schematic of a revolver off a combine elite while raiding their base. You bring me the parts for this beast, and I'll weld it all together for you."
-Quest.Level = 15
-Quest.ObtainItems = {}
-Quest.ObtainItems["weapon_ranged_junkpistol"] = 1
-Quest.ObtainItems["weapon_melee_wrench"] = 1
-Quest.ObtainItems["wood"] = 4
-Quest.ObtainItems["money"] = 400
-Quest.GainedExp = 150
-Quest.GainedItems = {}
-Quest.GainedItems["weapon_ranged_revolver"] = 1
 Register.Quest(Quest)
 
 local Quest = {}

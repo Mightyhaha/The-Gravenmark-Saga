@@ -53,6 +53,7 @@ if SERVER then
 	resource.AddDir("materials/gui",   ".vtf")
 	resource.AddDir("materials/icons", ".vmt")
 	resource.AddDir("materials/icons", ".vtf")
+	resource.AddDir("materials/icons/gen", ".png")
 
 	GM.RequiredWorkshop = {
 		{ID = "908477738", Name = "Medieval playermodels - red side"},
