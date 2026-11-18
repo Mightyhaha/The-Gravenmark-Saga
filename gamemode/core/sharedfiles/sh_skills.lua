@@ -161,6 +161,12 @@ function Player:CallSkillHook(strHook, ...)
 			tblReturnTable = {tblBuff.Hooks[strHook](self, tblInfo.Power, unpack(tblReturnTable))}
 		end
 	end
+	for _, strItem in pairs(self.Data and self.Data.Paperdoll or {}) do
+		local tblItem = ItemTable(strItem)
+		if tblItem and tblItem.Hooks and tblItem.Hooks[strHook] then
+			tblReturnTable = {tblItem.Hooks[strHook](self, 1, unpack(tblReturnTable))}
+		end
+	end
 	return unpack(tblReturnTable)
 end
 

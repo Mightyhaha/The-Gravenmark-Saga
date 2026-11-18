@@ -175,6 +175,61 @@ The sets reuse the same prop-built shapes (three helmet shapes, the gambeson and
 
 Rings are not sold in shops. From level 45 there are six unique rings that are meant to come from quests (`Item.QuestReward = true`): Dunmarrow Oathring (45), Kaelmoor Smuggler's Signet (65), Council Seal Ring (85), Gravenmark Wardenband (105), Ashen Vow (125) and Valcrest Signet (145). No quest hands them out yet; add them to a quest's `GainedItems` when the content above level 30 is written.
 
+### Loot rarity
+
+`sh_rarity.lua` and `sh_items_zy_rarity.lua`. Besides the crafted (common) gear there are three rarities, shown as a coloured frame around the icon and a line in the tooltip:
+
+| Rarity | Frame | Base damage or armor | Stat bonus (share of expected stats at the item's level) | Sells for |
+| --- | --- | --- | --- | --- |
+| Uncommon | Green | x 1.05 | 8% | 40% of the crafted item |
+| Rare | Blue | x 1.10 | 16%, or 8% plus a power | 60% |
+| Epic | Purple | x 1.15 | 16%, or 8% plus a power | 80% |
+
+Loot sells for less than the crafted item it is based on because elites drop it on every kill; at full price elites would be the best way to make denars.
+
+Greens and blues are generated at load time: every crafted weapon and armor piece (not jewelry) gets one copy per fitting suffix in `GM.LootSuffixes`, named `<item>_<suffix>` (for example `weapon_melee_steel_longsword_bear`, "Steel Longsword of the Bear"). Melee weapons get strength suffixes, ranged weapons dexterity ones, and armor both plus health. Rare suffixes "of Embers" (hits can set the target alight) and "of the Leech" (kills heal) carry powers. Bonuses scale with the expected stats and health at the item's level, so a suffix is worth about the same at level 10 and level 150. Copies keep their base item's model, icon and equipment set (a variant counts as the set piece), and are never crafted or sold in shops.
+
+Epics are hand-made uniques built on a crafted item, defined at the bottom of `sh_items_zy_rarity.lua` with `Unique(...)`. The first is Thorne's Oath, Sir Gaspard Thorne's sword (based on the Knight's Longsword, kills restore 5% health).
+
+Items with powers use the skill hooks: anything in an item's `Hooks` runs from `Player:CallSkillHook` while it is worn, at rank 1, and there is a new `on_hit` hook (`ply, rank, victim, damage`) called whenever a player damages an NPC.
+
+An NPC with `NPC.EliteLoot` always drops exactly one of these on top of its normal drops:
+
+```lua
+NPC.EliteLoot = {
+	Epic = {"unique_thornes_oath"},             -- epics this elite can drop; without any, an epic roll becomes rare
+	Rarity = {uncommon = 70, rare = 25, epic = 5}, -- optional, these are the defaults
+	LevelRange = 10,                             -- optional, greens and blues from (elite level - 10) to its level
+	Slots = {"slot_primaryweapon"},              -- optional, only these slots
+	Rolls = 1,                                   -- optional, more than one guaranteed drop
+}
+```
+
+Sir Gaspard Thorne is the first elite. Rare and epic drops are announced in chat. All numbers are in `GM.Rarities` and `GM.RarityTuning` in `sh_rarity.lua`. Give yourself a variant with its name, for example `udk_edit_items_giveitem weapon_melee_longsword_warlord`; the item editor's give menu leaves the variants out.
+
+### Legendaries: the Rebellion
+
+`sh_items_zy_rebellion.lua` and `quests/sh_quest_rebellion.lua`. Legendary (orange) items are quest rewards only: they never drop, can't be sold, dropped or given away, and get their own icons from the icon renderer. Base damage or armor x 1.20, and a 20% stat budget split with their power. `GM:MakeLegendaryItem` in `sh_items_zy_rarity.lua` makes new ones.
+
+Ulric's questline "The Rebellion" starts at level 100 after "The First Sitting". The first quest gives the sword; each later quest takes the current stage and crafting materials and gives the next, so the sword is awakened every 10 levels and changes its look each time:
+
+| Level | Sword | Look | Also rewards |
+| --- | --- | --- | --- |
+| 100 | Start of the Rebellion | Plain iron longsword | |
+| 110 | Voice of the Rebellion | Steel | |
+| 120 | Banner of the Rebellion | Silver | Signet of the Trifecta |
+| 130 | Fire of the Rebellion | Gravensteel | |
+| 140 | Fury of the Rebellion | Blood-dark ebony | Ember of Dunmarrow |
+| 150 | Rebellion | Crimson dreadforged | |
+
+| Item | Power |
+| --- | --- |
+| The sword | Each kill grants a stack of Rally (+3% damage for 10 seconds), up to as many stacks as its stage. At stage six, kills at full Rally also restore 3% health |
+| Signet of the Trifecta (ring, 120) | One more food effect at once, and food and Rested last 25% longer |
+| Ember of Dunmarrow (amulet, 140) | 15% less damage taken while below half health |
+
+Wearing all three gives the "Regalia of the Rebellion" set bonus. Every stage of the sword counts as the sword for the set (later stages have `BaseItem = "legendary_rebellion_1"`). The quest story text is a first draft.
+
 ### Crafting
 
 Three trades replace the old Underdone ones: **Blacksmithing**, **Leatherworking** and **Tailoring**. Trades level from tier 1 to 15 in the Character tab. A recipe needs the trade tier `ceil(item level / 10)`, so a level 30 sword needs tier 3 and a level 150 sword tier 15. Mining (below) is a fourth trade. You can hold 60 tiers in total, enough for all four trades at 15, and you pay one tier at a time with the arrow button once the bar is full. Crafting gives trade experience (`25 + 12 x tier`, scaled down when the recipe is easy for you), and a craft always succeeds when you meet the requirements.
@@ -212,7 +267,18 @@ Only the main prop is solid; the decoration is drawn on every client around it. 
 | 7 | 120 to 139 | Gravensteel Ingot | Direwolf Hide | Gilded Brocade |
 | 8 | 140 to 150 | Dreadforged Ingot | Wyrmhide | Royal Velvet |
 
-**Where materials come from.** Metal comes from mining ore and smelting it (below). Every Morvaine and Gallows Company enemy drops the leather and cloth of its own level band (25% chance per kind, one or two at a time), so what drops follows the level you spawn the enemy at. Brannoc Hale (`shop_smith`, shop `shop_craftsupplies`) sells bands 1 and 2 only (`GM.Combat.ShopMaterialMaxBand`), and the Dunmarrow Quartermaster sells band 1. The level 7 quest "Iron for the Levy" hands out a starter bundle.
+**Where materials come from.** Metal comes from mining ore and smelting it (below). Every Morvaine and Gallows Company enemy drops the cloth of its own level band (4% chance, one at a time, `GM.Combat.ClothDropChance`) and, rarely, its leather (0.5%, one at a time, `GM.Combat.LeatherDropChance`), so what drops follows the level you spawn the enemy at. Brannoc Hale (`shop_smith`, shop `shop_craftsupplies`) sells bands 1 and 2 only (`GM.Combat.ShopMaterialMaxBand`), and the Dunmarrow Quartermaster sells band 1. The level 7 quest "Iron for the Levy" hands out a starter bundle and three starter recipes.
+
+**Recipes.** Gear recipes have to be learned (`sh_items_zz_zrecipescrolls.lua`). Every craftable weapon, armor piece and piece of jewelry has a recipe scroll named after its trade: "Smith's Notes: Steel Longsword", "Tanner's Pattern: ...", "Tailor's Pattern: ...", "Bowyer's Notes: ..." for bows and crossbows, and "Jeweller's Sketch: ..." for rings and necklaces. Use a scroll to learn the recipe for good (it is kept in your library and saved). A scroll for a recipe you already know can be sold or given away. Every equipment set with two or more crafted pieces also has a folio, for example "Folio: Warden's Plate", that teaches the whole set at once. Smelting recipes are always known.
+
+| Source | What |
+| --- | --- |
+| Any enemy | 1.5% chance per kill for a scroll (Luck raises it) |
+| Elites | 12% per kill, and 40% of those are folios |
+| Book Store (`shop_books`) and Brother Aldwin's Scribe's Satchel (`shop_scribe`) | Starter scrolls: every recipe of level 12 or below (Rusty Sword, Arming Sword, Hand Axe, Spear, Smithing Hammer, Hunting Bow, Light Crossbow, Padded Gambeson, Buckler, Quilted Belt) |
+| "Iron for the Levy" | Arming Sword, Hunting Bow and Padded Gambeson |
+
+A dropped scroll is for an item between 15 levels below and 3 levels above the enemy, and it is one you don't know yet if there is one. Morvaine soldiers lean towards smithing notes, and Gallows Company bandits towards leather and tailoring patterns. The killer gets a chat line naming the scroll. All numbers are in `GM.RecipeDrops`. Brother Aldwin (`shop_scribe`, "Scribe of Dunmarrow") is a new camp NPC: place him with the map editor. Give yourself a scroll by name, for example `UD_Dev_GiveItem recipe_scroll_weapon_melee_steel_longsword` or `UD_Dev_GiveItem recipe_folio_set_recruit`.
 
 **Shops.** The Blacksmith (`shop_melee`) and the Armor Store (`shop_armor`) sell weapons, armor and necklaces up to level 20 (`GM.Combat.ShopGearMaxLevel`) at 2.7 times the item's sell price, listed by level. Better gear is crafted or looted. The Quartermaster sells gear up to level 20.
 
@@ -242,13 +308,35 @@ Smelting is a Blacksmithing recipe at an anvil or forge (`sh_recipes_smelting.lu
 `UD_Dev_EditPaperDoll` opens the armor builder (single player). It shows a live preview on your character:
 
 1. Pick a **slot**. It loads the item you wear there, or press **Start empty**.
-2. **Add part**, then choose its model with **Browse** (shapes, household props, medieval models) or type any model path and press Enter.
+2. **Add part**, then choose its model with **Browse** or type any model path and press Enter. Browse opens a searchable window of model pictures: a suggested set (shapes, bones and creatures such as skulls, spines and antlion shell, household props, medieval models), or every model in a folder such as the Bremergard pack, gibs, junk or street props. Click one to put it on the selected part; the window stays open so you can try several.
 3. Move it with **Position**. On the head, chest, shoulder and waist slots this is forward / left / up from the slot point, so it means the same on every slot. Turn it with **Angle**, size it per axis with **Scale**.
-4. Give it a **Material** (Browse has the Bremergard leather, iron, steel and wood, plus cloth) and a **Tint**.
-5. **Duplicate** copies a part, **Mirror** copies it to the other side of the body (pauldrons, greaves), **Remove** deletes it. The selected part has a yellow box.
-6. **Copy item Lua** puts the `AddModel` lines on the clipboard (and in the console). Paste them into an item. While the builder is open your design is worn live in that slot and follows every slider. **Apply to worn item** keeps the design on the item you wear there after you close the builder, until the map changes.
+4. Give it a **Material** and a **Tint**. Browse shows texture swatches: the suggested set (Bremergard leather, iron, steel and wood, cloth, and specials such as flesh, crystal, swirling energy and glow), every texture in a folder, or **Materials of a model**, which lists the textures of any model you type. **Own** puts the model's own material back.
+5. Add **Effects** for the whole item (glow, embers, smoke, sparkles, light) and set their colour, size, amount and pulse. See Item effects below.
+6. **Duplicate** copies a part, **Mirror** copies it to the other side of the body (pauldrons, greaves), **Remove** deletes it. The selected part has a yellow box.
+7. **Copy item Lua** puts the `AddModel` lines (and `Item.Effects`) on the clipboard (and in the console). Paste them into an item. While the builder is open your design is worn live in that slot and follows every slider. **Apply to worn item** keeps the design on the item you wear there after you close the builder, until the map changes.
 
 The camera sliders orbit around your character (0 is the front). To get items to test with, use `UD_Dev_GiveItem <item> [amount]`.
+
+### Item effects
+
+Any item can glow, smoke or throw sparks while it is worn (`sh_item_effects.lua`). Add them in the armor builder's Effects section, or by hand:
+
+```lua
+Item.Effects = {
+	{Type = "glow", Color = Color(220, 30, 30), Size = 1, Amount = 1, Pulse = 1},
+	{Type = "embers", Color = Color(255, 90, 40), Size = 1, Amount = 1, Pulse = 1},
+}
+```
+
+| Type | Look | Size | Amount | Pulse |
+| --- | --- | --- | --- | --- |
+| `glow` | A coloured sheen over every part of the item | Brightness | Not used | Pulse speed (0 = steady) |
+| `embers` | Glowing motes drifting up off the item | Mote size | How many | Not used |
+| `smoke` | Thin smoke curling off the item | Puff size | How many | Not used |
+| `sparkle` | Short twinkles along the item | Twinkle size | How many | Not used |
+| `light` | Lights up the surroundings | Light radius | Brightness | Pulse speed |
+
+Particles appear at random points on the item's parts. Effects show on worn gear (yours and other players'), not yet on items held by NPCs. The later Rebellion swords use them: Fire of the Rebellion has embers, Fury of the Rebellion a dark red glow and smoke, and Rebellion a crimson glow, embers and a red light.
 
 ### Weapon clash sounds
 
@@ -269,7 +357,7 @@ The lines are in `content/sound/gravenmark/voice/<voice>/<line>_<n>.ogg`, where 
 | Command | Renders |
 | --- | --- |
 | `UD_Dev_RenderIcons` | Every gear item, ore and crafting material that has a model and no generated icon yet |
-| `UD_Dev_RenderIcons <filter>` | Only items whose name contains the filter, for any item with a model, for example `weapon_melee_iron` |
+| `UD_Dev_RenderIcons <filter>` | Only items whose name contains the filter, for any item with a model except jewelry (rings and necklaces have no model of their own and keep their icons), for example `weapon_melee_iron` |
 | `UD_Dev_RenderIcons <filter> force` | The same, even if an icon already exists. Use `UD_Dev_RenderIcons all force` to redo everything |
 
 Armor is shown from the front (helmets three-quarter front), weapons from the side running diagonally, and shields from their face. An item that looks wrong can set its own view, where `Zoom` above 1 moves closer:

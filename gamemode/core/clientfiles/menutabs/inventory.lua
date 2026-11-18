@@ -28,13 +28,18 @@ function PANEL:Init()
 		GAMEMODE.ActiveMenu = DermaMenu()
 		local ReadSubMenu = GAMEMODE.ActiveMenu:AddSubMenu("Read ...")
 		ReadSubMenu.Panels = {}
+		local intRecipes = 0
 		for Book, _ in pairs(LocalPlayer().Data.Library or {}) do
 			local Item = ItemTable(Book)
-			local Panel = ReadSubMenu:AddOption(Item.PrintName, function() RunConsoleCommand("UD_ReadBook", Book) end)
-			ReadSubMenu.Panels[#ReadSubMenu.Panels] = Panel
-			ReadSubMenu.Panels[#ReadSubMenu.Panels]:SetTooltip(Item.Desc)
+			if Item and Item.RecipeLevel then
+				intRecipes = intRecipes + 1
+			elseif Item then
+				local Panel = ReadSubMenu:AddOption(Item.PrintName, function() RunConsoleCommand("UD_ReadBook", Book) end)
+				ReadSubMenu.Panels[#ReadSubMenu.Panels] = Panel
+				ReadSubMenu.Panels[#ReadSubMenu.Panels]:SetTooltip(Item.Desc)
+			end
 		end
-		GAMEMODE.ActiveMenu:AddOption("Crafting ...", function() RunConsoleCommand("UD_OpenCraftMenu") end)
+		GAMEMODE.ActiveMenu:AddOption("Crafting (" .. intRecipes .. " recipe scrolls read) ...", function() RunConsoleCommand("UD_OpenCraftMenu") end)
 		GAMEMODE.ActiveMenu:Open()
 	end)
 

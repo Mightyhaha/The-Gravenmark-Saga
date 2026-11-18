@@ -31,7 +31,11 @@ local function AddMaterialDrops(Table)
 		local intMin = intBand == 1 and 1 or (intBand - 1) * 20
 		local intMax = intBand == intBands and 150 or intBand * 20 - 1
 		for strKind, tblBands in pairs(GM.CraftMaterials) do
-			if strKind ~= "metal" then AddDrop(Table, tblBands[intBand], 25, 1, 2, intMin, intMax) end
+			if strKind == "leather" then
+				AddDrop(Table, tblBands[intBand], GM.Combat.LeatherDropChance, 1, 1, intMin, intMax)
+			elseif strKind ~= "metal" then
+				AddDrop(Table, tblBands[intBand], GM.Combat.ClothDropChance, 1, 1, intMin, intMax)
+			end
 		end
 	end
 	return Table
@@ -101,6 +105,12 @@ local NPC = QuestGiver("quest_ulric", "Ulric of Dunmarrow", "Lord of Dunmarrow, 
 	"quest_ulric_robberknight",
 	"quest_ulric_marshal",
 	"quest_ulric_writ",
+	"quest_rebellion_1",
+	"quest_rebellion_2",
+	"quest_rebellion_3",
+	"quest_rebellion_4",
+	"quest_rebellion_5",
+	"quest_rebellion_6",
 })
 NPC.Voice = "keeper_neutral"
 Register.NPC(NPC)
@@ -131,6 +141,14 @@ local NPC = QuickNPC("shop_provisioner", "Old Bettany", "npc_breen", "human", ni
 NPC = AddBool(NPC, false, true, true)
 NPC.Title = "Camp Cook"
 NPC.Shop = "shop_provisions"
+NPC.DeathDistance = 14
+Register.NPC(NPC)
+
+local NPC = QuickNPC("shop_scribe", "Brother Aldwin", "npc_breen", "human", nil, "models/Humans/Group03/Male_04.mdl")
+NPC = AddBool(NPC, false, true, true)
+NPC.Title = "Scribe of Dunmarrow"
+NPC.Shop = "shop_scribe"
+NPC.Voice = "keeper_neutral"
 NPC.DeathDistance = 14
 Register.NPC(NPC)
 
@@ -279,6 +297,7 @@ Register.NPC(NPC)
 
 local NPC = GallowsMelee("bandit_raubritter", "Sir Gaspard Thorne", 400, "raubritter.mdl", "npc_silver_sword_shield")
 NPC.Title = "The Robber Knight"
+NPC.EliteLoot = {Epic = {"unique_thornes_oath"}}
 NPC = AddDrop(NPC, "money", 100, 300, 500)
 NPC = AddDrop(NPC, "weapon_melee_longsword", 12)
 NPC = AddDrop(NPC, "armor_helm_greathelm", 10)

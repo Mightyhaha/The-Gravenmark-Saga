@@ -154,7 +154,7 @@ local function OpenCraftMenu(plyCaller, strCommand, tblArgs)
 	local Hint = vgui.Create("DLabel", Bottom)
 	Hint:Dock(FILL)
 	Hint:SetTextColor(White)
-	Hint:SetText("Pick a recipe. Metal comes from mining and smelting, leather and cloth from enemies. Trades level up as you craft.")
+	Hint:SetText("Pick a recipe. New recipes come from scrolls: enemies drop them, and scribes sell the basics. Metal comes from mining and smelting, cloth from enemies, leather rarely.")
 
 	local List = vgui.Create("DListView", Frame)
 	List:Dock(LEFT)

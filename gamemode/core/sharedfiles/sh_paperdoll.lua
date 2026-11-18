@@ -19,7 +19,7 @@ function Player:HasSet(strSet)
 	local tblSetTable = EquipmentSetTable(strSet)
 	if not tblSetTable then return false end
 	for _, strItem in pairs(tblSetTable.Items or {}) do
-		if not table.HasValue(self.Data.Paperdoll or {}, strItem) then return false end
+		if not self:IsWearingPiece(strItem) then return false end
 	end
 	return true
 end
@@ -161,6 +161,7 @@ if CLIENT then
 				entNewPart.Item = strItem
 				entNewPart.Attachment = tblSlotTable.Attachment
 				GAMEMODE.PaperDollEnts[self:SteamID64()][strSlot] = entNewPart
+				GAMEMODE:AttachItemEffects(entNewPart)
 			end
 		end
 	end
@@ -206,25 +207,32 @@ if CLIENT then
 				end
 				GAMEMODE.PaperDollEnts[steamID64] = nil
 			elseif not plyPlayer:IsDormant() then
+				local EditorOpen = GAMEMODE.PaperDollEditor and GAMEMODE.PaperDollEditor.IsOpen
 				for strSlot, entTarget in pairs(tblPlayerTable or {}) do
-					local tblItemTable = IsValid(entTarget) and not entTarget.UD_BoneMerged and ItemTable(entTarget.Item)
-					if tblItemTable then
-						local vecPos, angAng = GetSlotTransform(plyPlayer, entTarget)
-						if vecPos then
-							entTarget:SetAngles(angAng)
-							entTarget:SetAngles(entTarget:LocalToWorldAngles(tblItemTable.Model[1].Angle))
-							entTarget:SetPos(vecPos)
-							entTarget:SetPos(entTarget:LocalToWorld(tblItemTable.Model[1].Position))
+					local tblItemTable = IsValid(entTarget) and ItemTable(entTarget.Item)
+					local tblModel = tblItemTable and istable(tblItemTable.Model) and tblItemTable.Model
+					local vecSlot, angSlot
+					if tblModel and tblModel[1] then vecSlot, angSlot = GetSlotTransform(plyPlayer, entTarget) end
+					if vecSlot then
+						local Root = tblModel[1]
+						local _, angRoot = LocalToWorld(vector_origin, Root.Angle or angle_zero, vector_origin, angSlot)
+						local vecRoot = LocalToWorld(Root.Position or vector_origin, angle_zero, vecSlot, angRoot)
+						if not entTarget.UD_BoneMerged then
+							entTarget:SetAngles(angRoot)
+							entTarget:SetPos(vecRoot)
 						end
-						local EditorOpen = GAMEMODE.PaperDollEditor and GAMEMODE.PaperDollEditor.IsOpen
-						if EditorOpen or not entTarget.UD_ChildrenPlaced then
+						if EditorOpen or entTarget.UD_BoneMerged or not entTarget.UD_ChildrenPlaced then
 							entTarget.UD_ChildrenPlaced = true
 							for k, kid in pairs(entTarget.Children or {}) do
-								kid:SetAngles(entTarget:GetAngles())
-								kid:SetAngles(kid:LocalToWorldAngles(tblItemTable.Model[k + 1].Angle))
-								kid:SetPos(entTarget:GetPos())
-								kid:SetPos(kid:LocalToWorld(tblItemTable.Model[k + 1].Position))
-								kid:SetParent(entTarget)
+								local Info = tblModel[k + 1]
+								if IsValid(kid) and Info then
+									local _, angKid = LocalToWorld(vector_origin, Info.Angle or angle_zero, vector_origin, angRoot)
+									local vecKid = LocalToWorld(Info.Position or vector_origin, angle_zero, vecRoot, angKid)
+									if entTarget.UD_BoneMerged and IsValid(kid:GetParent()) then kid:SetParent(NULL) end
+									kid:SetAngles(angKid)
+									kid:SetPos(vecKid)
+									if not entTarget.UD_BoneMerged and kid:GetParent() ~= entTarget then kid:SetParent(entTarget) end
+								end
 							end
 						end
 					end
@@ -268,6 +276,7 @@ function GM:BuildModel(tblModelTable)
 				local matrix = Matrix()
 				matrix:Scale(scale)
 				entNewPart:EnableMatrix("RenderMultiply", matrix)
+				entNewPart.UD_Scale = isvector(scale) and Vector(scale) or Vector(scale, scale, scale)
 				--entNewPart:SetModelScale(scale)
 			else
 				entNewPart:SetServerScale(scale)

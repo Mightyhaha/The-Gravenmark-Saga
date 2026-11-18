@@ -22,6 +22,40 @@ GM.CraftingStations = {
 
 GM.CraftingStationNames = {smithing = "an anvil or forge", workbench = "a workbench", tailoring = "a tailoring table", leatherwork = "a leatherworking bench"}
 
+GM.GearTrades = {
+	slot_primaryweapon = {"master_blacksmithing"},
+	slot_helm = {"master_blacksmithing"},
+	slot_shoulder = {"master_blacksmithing", "master_leatherworking"},
+	slot_chest = {"master_blacksmithing", "master_tailoring"},
+	slot_waist = {"master_leatherworking"},
+	slot_offhand = {"master_blacksmithing", "master_leatherworking"},
+	slot_neck = {"master_blacksmithing"},
+	slot_ring_1 = {"master_blacksmithing"},
+}
+
+GM.GearClassTrades = {
+	bow = {"master_leatherworking"},
+	crossbow = {"master_blacksmithing", "master_leatherworking"},
+}
+
+GM.GearSoftTrades = {
+	slot_helm = {"master_tailoring"},
+	slot_chest = {"master_tailoring"},
+	slot_waist = {"master_tailoring"},
+}
+
+GM.TradeStations = {
+	master_blacksmithing = "smithing",
+	master_leatherworking = "leatherwork",
+	master_tailoring = "tailoring",
+}
+
+function GM:GetGearTrades(tblItem)
+	if not tblItem or not tblItem.Crafted or not tblItem.Slot or not self.GearTrades[tblItem.Slot] then return nil end
+	local boolSoft = (tblItem.Level or 1) < 20 and self.GearSoftTrades[tblItem.Slot] ~= nil
+	return self.GearClassTrades[tblItem.WeaponClass or ""] or (boolSoft and self.GearSoftTrades[tblItem.Slot]) or self.GearTrades[tblItem.Slot], boolSoft
+end
+
 function GM:GetStationOf(strModel, entStation)
 	if IsValid(entStation) then
 		local strTagged = entStation:GetNWString("UD_Station", "")

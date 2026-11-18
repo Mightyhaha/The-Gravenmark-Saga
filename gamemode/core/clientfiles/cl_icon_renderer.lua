@@ -261,14 +261,14 @@ function Renderer.HasIcon(strName)
 end
 
 function Renderer.ShouldRender(strName, tblItem, strFilter, boolForce)
+	if tblItem.Generated then return false end
 	if not tblItem.Model or #NormalizeModel(tblItem.Model) == 0 then return false end
+	local tblSlot = tblItem.Slot and GAMEMODE.DataBase.Slots[tblItem.Slot]
+	if (tblSlot and tblSlot.NoModel) or tblItem.SlotGroup == "ring" then return false end
 	if strFilter then
 		if not string.find(strName, strFilter, 1, true) then return false end
 	elseif not (tblItem.Slot or tblItem.OreBand or tblItem.CraftBand) then
 		return false
-	else
-		local tblSlot = tblItem.Slot and GAMEMODE.DataBase.Slots[tblItem.Slot]
-		if (tblSlot and tblSlot.NoModel) or tblItem.SlotGroup == "ring" then return false end
 	end
 	return boolForce or not Renderer.HasIcon(strName)
 end
@@ -284,6 +284,25 @@ function Renderer.Start(strFilter, boolForce)
 	Renderer.Failed = 0
 	file.CreateDir(Renderer.Folder)
 	print("[Icons] Rendering " .. Renderer.Total .. " item icons into data/" .. Renderer.Folder .. "/")
+	if Renderer.Total == 0 and strFilter then
+		local intMatched = 0
+		for strName, tblItem in SortedPairs(GAMEMODE.DataBase.Items) do
+			if string.find(strName, strFilter, 1, true) then
+				intMatched = intMatched + 1
+				local strWhy = "already has an icon (add force)"
+				local tblSlot = tblItem.Slot and GAMEMODE.DataBase.Slots[tblItem.Slot]
+				if tblItem.Generated then
+					strWhy = "rarity copy, uses " .. tostring(tblItem.BaseItem) .. "'s icon"
+				elseif (tblSlot and tblSlot.NoModel) or tblItem.SlotGroup == "ring" then
+					strWhy = "jewelry has no model, keeps its own icon"
+				elseif not tblItem.Model or #NormalizeModel(tblItem.Model) == 0 then
+					strWhy = "has no model"
+				end
+				if intMatched <= 12 then print("[Icons]   " .. strName .. ": " .. strWhy) end
+			end
+		end
+		print("[Icons] " .. intMatched .. " item names contain \"" .. strFilter .. "\". If an item you expect is missing, it failed to load: restart the map and look for red errors in the console.")
+	end
 end
 
 function Renderer.Finish()

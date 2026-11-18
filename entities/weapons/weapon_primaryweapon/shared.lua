@@ -116,7 +116,7 @@ function SWEP:WeaponAttack()
 		if SERVER then
 			self:GetOwner():SlowDown((1 / intFireRate))
 		end
-		if (game.SinglePlayer() and SERVER) or (not game.SinglePlayer() and CLIENT) and self.WeaponTable.Sound then
+		if ((game.SinglePlayer() and SERVER) or (not game.SinglePlayer() and CLIENT)) and not GAMEMODE:PlaySwingSound(self, self.WeaponTable) and self.WeaponTable.Sound then
 			self:EmitSound(self.WeaponTable.Sound)
 		end
 		self:SetNextPrimaryFire(CurTime() + (1 / intFireRate))

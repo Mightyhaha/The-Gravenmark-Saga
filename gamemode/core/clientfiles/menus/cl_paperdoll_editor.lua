@@ -11,6 +11,8 @@ Editor.Parts = {}
 Editor.Selected = nil
 Editor.Slot = nil
 Editor.Preview = {}
+Editor.Effects = {}
+Editor.EffectSelected = nil
 
 local PropGroups = {
 	{"Shapes", {
@@ -57,6 +59,24 @@ local PropGroups = {
 	}},
 }
 
+table.insert(PropGroups, 2, {"Bones and creatures", {
+	{"Skull", "models/gibs/hgibs.mdl"},
+	{"Spine", "models/gibs/hgibs_spine.mdl"},
+	{"Rib", "models/gibs/hgibs_rib.mdl"},
+	{"Shoulder blade", "models/gibs/hgibs_scapula.mdl"},
+	{"Antlion shell, large", "models/gibs/antlion_gib_large_1.mdl"},
+	{"Antlion shell, large 2", "models/gibs/antlion_gib_large_2.mdl"},
+	{"Antlion claw piece", "models/gibs/antlion_gib_medium_3a.mdl"},
+	{"Antlion shard", "models/gibs/antlion_gib_small_1.mdl"},
+	{"Antlion shard 2", "models/gibs/antlion_gib_small_2.mdl"},
+	{"Metal shard", "models/gibs/manhack_gib05.mdl"},
+	{"Meat hook", "models/props_junk/meathook001a.mdl"},
+	{"Harpoon", "models/props_junk/harpoon002a.mdl"},
+	{"Skeleton, sitting", "models/props/debris/skeleton/cr_skel_pose01.mdl"},
+	{"Skeleton, lying", "models/props/debris/skeleton/cr_skel_pose02.mdl"},
+	{"Grave cross", "models/props_c17/gravestone_cross001b.mdl"},
+}})
+
 local MaterialGroups = {
 	{"Leather", {
 		{"Leather, dark brown", "nayrbarr/round shield/leather-dark brown"},
@@ -82,8 +102,16 @@ local MaterialGroups = {
 		{"Fence wood", "models/props_wasteland/wood_fence01a"},
 		{"Sword grip", "nayrbarr/sword/handle"},
 	}},
-	{"Other", {
+	{"Special", {
 		{"Flat colour (use tint)", "models/debug/debugwhite"},
+		{"Flesh", "models/flesh"},
+		{"Swirling energy", "models/props_combine/portalball001_sheet"},
+		{"Crystal", "models/props_lab/xencrystal_sheet"},
+		{"Blue glow", "models/alyx/emptool_glow"},
+		{"Energy rings", "models/props_combine/tprings_globe"},
+		{"Old blade metal", "models/props_c17/furnituremetal002a"},
+		{"Chrome", "models/shiny"},
+		{"Plain wood", "phoenix_storms/wood"},
 	}},
 }
 
@@ -230,6 +258,7 @@ hook.Add("Think", "UD_PaperDollEditorPreview", function()
 	end
 	local tblItem = GAMEMODE.DataBase.Items[PreviewItem] or {Name = PreviewItem, PrintName = "Armor Builder preview"}
 	tblItem.Model = tblModel
+	tblItem.Effects = Editor.Effects
 	GAMEMODE.DataBase.Items[PreviewItem] = tblItem
 
 	local strSig = table.concat(tblSig, "|")
@@ -302,6 +331,14 @@ local function BuildLua()
 		end
 		table.insert(tblLines, strLine .. ")")
 		if Info.BoneMerge then table.insert(tblLines, "Item.Model[#Item.Model].BoneMerge = true") end
+	end
+	if #Editor.Effects > 0 then
+		table.insert(tblLines, "Item.Effects = {")
+		for _, Effect in ipairs(Editor.Effects) do
+			local Col = Effect.Color or color_white
+			table.insert(tblLines, string.format("\t{Type = \"%s\", Color = Color(%d, %d, %d), Size = %s, Amount = %s, Pulse = %s},", Effect.Type, Col.r, Col.g, Col.b, Num(Effect.Size or 1, 2), Num(Effect.Amount or 1, 2), Num(Effect.Pulse or 1, 2)))
+		end
+		table.insert(tblLines, "}")
 	end
 	return table.concat(tblLines, "\n")
 end
@@ -457,8 +494,15 @@ function Editor.Open()
 			Editor.Parts = FromItemModel(tblItem.Model)
 			Notify("Loaded " .. (tblItem.PrintName or strItem) .. ".")
 		end
+		Editor.Effects = {}
+		for _, Effect in ipairs(tblItem and tblItem.Effects or {}) do
+			local Col = Effect.Color or color_white
+			table.insert(Editor.Effects, {Type = Effect.Type, Color = Color(Col.r, Col.g, Col.b), Size = Effect.Size or 1, Amount = Effect.Amount or 1, Pulse = Effect.Pulse or 1})
+		end
+		Editor.EffectSelected = #Editor.Effects > 0 and 1 or nil
 		Editor.Selected = #Editor.Parts > 0 and 1 or nil
 		Rebuild()
+		if Controls.RefreshEffects then Controls.RefreshEffects() end
 	end
 
 	AddHeader(Body, "Slot")
@@ -488,7 +532,10 @@ function Editor.Open()
 		{"Start empty", function()
 			Editor.Parts = {}
 			Editor.Selected = nil
+			Editor.Effects = {}
+			Editor.EffectSelected = nil
 			Rebuild()
+			Controls.RefreshEffects()
 		end},
 	})
 
@@ -561,19 +608,17 @@ function Editor.Open()
 	ModelPick:SetWide(70)
 	ModelPick:SetText("Browse")
 	ModelPick.DoClick = function()
-		local Menu = DermaMenu()
+		local tblSuggested = {}
 		for _, Group in ipairs(PropGroups) do
-			local Sub = Menu:AddSubMenu(Group[1])
 			for _, Entry in ipairs(Group[2]) do
-				if ModelExists(Entry[2]) then
-					Sub:AddOption(Entry[1], function()
-						ModelEntry:SetValue(Entry[2])
-						ModelEntry:OnEnter()
-					end)
-				end
+				if ModelExists(Entry[2]) then table.insert(tblSuggested, {Value = Entry[2], Label = Group[1] .. ": " .. Entry[1]}) end
 			end
 		end
-		Menu:Open()
+		GAMEMODE.AssetBrowser.Open("model", function(strModel)
+			if not SelectedPart() then Notify("Select or add a part first.") return end
+			ModelEntry:SetValue(strModel)
+			ModelEntry:OnEnter()
+		end, tblSuggested, "Choose a model for the selected part")
 	end
 	Controls.ModelEntry = ModelEntry
 
@@ -652,21 +697,25 @@ function Editor.Open()
 	MatPick:SetWide(70)
 	MatPick:SetText("Browse")
 	MatPick.DoClick = function()
-		local Menu = DermaMenu()
-		Menu:AddOption("Model's own material", function()
-			MaterialEntry:SetValue("")
-			MaterialEntry:OnEnter()
-		end)
+		local tblSuggested = {}
 		for _, Group in ipairs(MaterialGroups) do
-			local Sub = Menu:AddSubMenu(Group[1])
-			for _, Entry in ipairs(Group[2]) do
-				Sub:AddOption(Entry[1], function()
-					MaterialEntry:SetValue(Entry[2])
-					MaterialEntry:OnEnter()
-				end)
-			end
+			for _, Entry in ipairs(Group[2]) do table.insert(tblSuggested, {Value = Entry[2], Label = Entry[1]}) end
 		end
-		Menu:Open()
+		GAMEMODE.AssetBrowser.Open("material", function(strMaterial)
+			if not SelectedPart() then Notify("Select or add a part first.") return end
+			MaterialEntry:SetValue(strMaterial)
+			MaterialEntry:OnEnter()
+		end, tblSuggested, "Choose a material for the selected part")
+	end
+	local MatClear = vgui.Create("DButton", MatRow)
+	MatClear:Dock(RIGHT)
+	MatClear:SetWide(50)
+	MatClear:DockMargin(0, 0, 4, 0)
+	MatClear:SetText("Own")
+	MatClear:SetTooltip("Use the model's own material again")
+	MatClear.DoClick = function()
+		MaterialEntry:SetValue("")
+		MaterialEntry:OnEnter()
 	end
 	Controls.MaterialEntry = MaterialEntry
 
@@ -696,6 +745,96 @@ function Editor.Open()
 		end},
 	})
 
+	AddHeader(Body, "Effects (whole item)")
+	local EffectList = vgui.Create("DListView", Body)
+	EffectList:Dock(TOP)
+	EffectList:DockMargin(4, 0, 4, 2)
+	EffectList:SetTall(70)
+	EffectList:SetMultiSelect(false)
+	EffectList:AddColumn("#"):SetFixedWidth(24)
+	EffectList:AddColumn("Effect")
+	local EffectControls = {}
+
+	local function SelectedEffect()
+		return Editor.EffectSelected and Editor.Effects[Editor.EffectSelected]
+	end
+
+	local function SyncEffect()
+		local Effect = SelectedEffect()
+		Editor.Syncing = true
+		EffectControls.Size:SetValue(Effect and Effect.Size or 1)
+		EffectControls.Amount:SetValue(Effect and Effect.Amount or 1)
+		EffectControls.Pulse:SetValue(Effect and Effect.Pulse or 1)
+		local Col = Effect and Effect.Color or color_white
+		EffectControls.Color:SetColor(Color(Col.r, Col.g, Col.b, 255))
+		Editor.Syncing = false
+	end
+
+	Controls.RefreshEffects = function()
+		EffectList:Clear()
+		for Index, Effect in ipairs(Editor.Effects) do
+			local strName = Effect.Type
+			for _, Type in ipairs(GAMEMODE.ItemEffectTypes) do
+				if Type.Key == Effect.Type then strName = Type.PrintName end
+			end
+			EffectList:AddLine(Index, strName)
+		end
+		if Editor.EffectSelected and EffectList:GetLine(Editor.EffectSelected) then
+			EffectList:SelectItem(EffectList:GetLine(Editor.EffectSelected))
+		end
+		SyncEffect()
+	end
+
+	EffectList.OnRowSelected = function(self, Index, Line)
+		Editor.EffectSelected = tonumber(Line:GetColumnText(1))
+		SyncEffect()
+	end
+
+	AddButtonRow(Body, {
+		{"Add effect", function()
+			local Menu = DermaMenu()
+			for _, Type in ipairs(GAMEMODE.ItemEffectTypes) do
+				local Option = Menu:AddOption(Type.PrintName, function()
+					table.insert(Editor.Effects, GAMEMODE:NewItemEffect(Type.Key))
+					Editor.EffectSelected = #Editor.Effects
+					Controls.RefreshEffects()
+				end)
+				Option:SetTooltip(Type.Desc)
+			end
+			Menu:Open()
+		end},
+		{"Remove effect", function()
+			if not Editor.EffectSelected then return end
+			table.remove(Editor.Effects, Editor.EffectSelected)
+			Editor.EffectSelected = #Editor.Effects > 0 and math.min(Editor.EffectSelected, #Editor.Effects) or nil
+			Controls.RefreshEffects()
+		end},
+	})
+
+	local function EffectChanged(strKey)
+		return function(Value)
+			local Effect = SelectedEffect()
+			if Effect then Effect[strKey] = Value end
+		end
+	end
+	EffectControls.Size = AddSlider(Body, "Size", 0.1, 4, 2, EffectChanged("Size"))
+	EffectControls.Amount = AddSlider(Body, "Amount", 0, 4, 2, EffectChanged("Amount"))
+	EffectControls.Pulse = AddSlider(Body, "Pulse speed", 0, 4, 2, EffectChanged("Pulse"))
+	local EffectMixer = vgui.Create("DColorMixer", Body)
+	EffectMixer:Dock(TOP)
+	EffectMixer:DockMargin(4, 0, 4, 2)
+	EffectMixer:SetTall(90)
+	EffectMixer:SetPalette(false)
+	EffectMixer:SetAlphaBar(false)
+	EffectMixer:SetWangs(true)
+	EffectMixer.ValueChanged = function(self, Col)
+		if Editor.Syncing then return end
+		local Effect = SelectedEffect()
+		if Effect then Effect.Color = Color(Col.r, Col.g, Col.b) end
+	end
+	EffectControls.Color = EffectMixer
+	Controls.RefreshEffects()
+
 	AddHeader(Body, "Camera")
 	local CamRot = AddSlider(Body, "Around", -180, 180, 0, function(Value) Editor.CurrentCamRotation = Value end)
 	local CamDist = AddSlider(Body, "Distance", -60, 60, 0, function(Value) Editor.CurrentCamDistance = Value end)
@@ -718,6 +857,7 @@ function Editor.Open()
 			local tblItem = strItem and ItemTable(strItem)
 			if not tblItem or #Editor.Parts == 0 then Notify("Wear an item in this slot first.") return end
 			tblItem.Model = ToItemModel()
+			tblItem.Effects = #Editor.Effects > 0 and table.Copy(Editor.Effects) or nil
 			LocalPlayer():PaperDollBuildSlot(Editor.Slot, strItem)
 			Notify((tblItem.PrintName or strItem) .. " now uses this design until the map changes. Paste the Lua to keep it.")
 		end},
@@ -728,7 +868,7 @@ function Editor.Open()
 	Hint:SetWrap(true)
 	Hint:SetAutoStretchVertical(true)
 	Hint:SetTextColor(Color(40, 40, 40))
-	Hint:SetText("Press Enter after typing a model or material path. Positions are measured from the slot point. Mirror copies the part to the other side of the body. Paste copied lines into an item in gamemode/core/sharedfiles/database/items/.")
+	Hint:SetText("Press Enter after typing a model or material path, or use Browse to search models and materials with previews. Positions are measured from the slot point. Effects (glow, embers, smoke, sparkles, light) apply to the whole item. Mirror copies the part to the other side of the body. Paste copied lines into an item in gamemode/core/sharedfiles/database/items/.")
 
 	local tblWorn = LocalPlayer().Data and LocalPlayer().Data.Paperdoll or {}
 	local strStart = Editor.Slot

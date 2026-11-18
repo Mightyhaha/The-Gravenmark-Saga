@@ -26,6 +26,18 @@ Shop.PrintName = "Book Store"
 Shop.Inventory = {}
 Shop.Inventory["book_of_beginning"] = {}
 Shop.Inventory["book_polkmstail_ep1"] = {}
+for _, strScroll in ipairs(GM.RecipeScrolls or {}) do
+	if GM.DataBase.Items[strScroll].RecipeStarter then Shop.Inventory[strScroll] = {} end
+end
+Register.Shop(Shop)
+
+local Shop = {}
+Shop.Name = "shop_scribe"
+Shop.PrintName = "Scribe's Satchel"
+Shop.Inventory = {}
+for _, strScroll in ipairs(GM.RecipeScrolls or {}) do
+	if GM.DataBase.Items[strScroll].RecipeStarter then Shop.Inventory[strScroll] = {} end
+end
 Register.Shop(Shop)
 
 local Shop = {}

@@ -29,6 +29,8 @@ GM.Combat = {
 	MaxTradeTier = 15,
 	ShopGearMaxLevel = 20,
 	ShopMaterialMaxBand = 2,
+	LeatherDropChance = 0.5,
+	ClothDropChance = 4,
 }
 
 GM.WeaponClasses = {
@@ -90,7 +92,7 @@ function GM:GetExpectedPlayerDamage(intLevel)
 end
 
 function GM:GetExpectedPlayerHealth(intLevel)
-	local tblStat = StatTable("stat_maxhealth")
+	local tblStat = GAMEMODE and StatTable("stat_maxhealth")
 	return (tblStat and tblStat.Default or 100) + self.LevelGrowth.stat_maxhealth * (intLevel - 1)
 end
 

@@ -67,10 +67,10 @@ Register.Quest(Quest)
 
 local Quest = NewQuest("quest_dm_ironforthelevy", "Iron for the Levy", 7, "quest_dm_turncloaks",
 	"Morvaine's footsoldiers carry better steel than we do, and their kit is worth more than ours. Kill six soldiers and we'll strip every scrap of iron and leather we can use. I'll see you get a share, and any smith in camp will show you how to work it.",
-	"Here: iron, hide and linen. Find a forge, a tanner's bench or a tailor's table and learn the work. A soldier who can mend his own kit lives longer.")
+	"Here: iron, hide and linen, and three sets of notes Brother Aldwin copied out for the recruits. Read them, then find a forge, a tanner's bench or a tailor's table and learn the work. A soldier who can mend his own kit lives longer.")
 Quest.Kill = {morvaine_soldier = 6}
 Quest.GainedExp = 370
-Quest.GainedItems = {mat_ingot_scrap = 10, mat_leather_1 = 4, mat_cloth_1 = 4, money = 50}
+Quest.GainedItems = {mat_ingot_scrap = 10, mat_leather_1 = 4, mat_cloth_1 = 4, money = 50, recipe_scroll_weapon_melee_sword = 1, recipe_scroll_weapon_ranged_huntingbow = 1, recipe_scroll_armor_chest_gambeson = 1}
 Register.Quest(Quest)
 
 local Quest = NewQuest("quest_dm_blackjory", "Black Jory", 8, "quest_dm_ironforthelevy",

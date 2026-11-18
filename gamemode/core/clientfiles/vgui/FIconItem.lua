@@ -74,6 +74,11 @@ function PANEL:Paint(w, h)
 	surface.SetDrawColor(255, 255, 255, 255)
 	surface.SetMaterial(BorderIcon)
 	surface.DrawTexturedRect(0, 0, w, h)
+	if self.RarityColor then
+		surface.SetDrawColor(self.RarityColor)
+		surface.DrawOutlinedRect(1, 1, w - 2, h - 2)
+		surface.DrawOutlinedRect(2, 2, w - 4, h - 4)
+	end
 
 	if self.Text then
 		if tonumber(self.Text) and tonumber(self.Text) >= 1000  then
@@ -143,6 +148,7 @@ end
 
 function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 	if not ItemTable then
+		self.RarityColor = nil
 		self:SetIcon(nil)
 		self:SetText(Amount or nil)
 		self:SetDragable(false)
@@ -151,6 +157,8 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 		self:SetTooltip(nil)
 		return
 	end
+	local Rarity = GAMEMODE.Rarities[GAMEMODE:GetRarity(ItemTable)]
+	self.RarityColor = Rarity and GAMEMODE:GetRarity(ItemTable) ~= "common" and Rarity.Color or nil
 	Cost = Cost or 0
 	UseCommand = UseCommand or "use"
 	self.UseCommand = UseCommand
@@ -203,6 +211,7 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 	if ItemTable.Level and ItemTable.Level > 1 then Tooltip = Format("%s (lv. %s)", Tooltip, ItemTable.Level) end
 	if ItemTable.Level and ItemTable.Level > LocalPlayer():GetLevel() then self:SetColor(Red) end
 	if ItemTable.Weight and ItemTable.Weight > 0 then Tooltip = Format("%s (%s Kgs)", Tooltip, ItemTable.Weight) end
+	if self.RarityColor then Tooltip = Format("%s\n%s", Tooltip, Rarity.PrintName) end
 	if ItemTable.Desc then Tooltip = Format("%s\n%s", Tooltip, ItemTable.Desc) end
 	if ItemTable.Power then Tooltip = Format("%s\nDamage: %s", Tooltip, ItemTable.Power) end
 	if ItemTable.NumOfBullets and ItemTable.NumOfBullets > 1 then Tooltip = Format("%sx%s", Tooltip, ItemTable.NumOfBullets) end
@@ -218,6 +227,8 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 		local StatTable = StatTable(Stat)
 		Tooltip = Format("%s\n+%s %s", Tooltip, Amount, StatTable.PrintName)
 	end
+	if ItemTable.PowerDesc then Tooltip = Format("%s\n%s", Tooltip, ItemTable.PowerDesc) end
+	if ItemTable.Lore then Tooltip = Format("%s\n\n\"%s\"", Tooltip, ItemTable.Lore) end
 	local SetTable = EquipmentSetTable(ItemTable.Set) or {}
 	if SetTable.Items then
 		Tooltip = Format("%s\n\nSet: %s", Tooltip, SetTable.PrintName)
@@ -225,7 +236,7 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 	for _, Item in pairs(SetTable.Items or {}) do
 		local SetItemTable = GAMEMODE.DataBase.Items[Item]
 		if SetItemTable then
-			local Wearing = LocalPlayer():IsWearing(Item) and 1 or 0
+			local Wearing = LocalPlayer():IsWearingPiece(Item) and 1 or 0
 			Tooltip = Format("%s\n%s/%s %s", Tooltip, Wearing, 1, SetItemTable.PrintName or Item)
 		end
 	end

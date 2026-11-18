@@ -50,6 +50,17 @@ local function UpdateNPCLeash()
 end
 timer.Create("UD_NPCLeash", LeashInterval, 0, UpdateNPCLeash)
 
+local function SpawnLoot(Target, Killer, Item, Amount)
+	local Loot = CreateWorldItem(Item, Amount, Target:GetPos() + Vector(0, 0, 30))
+	if not IsValid(Loot) then return end
+	Loot:SetOwner(Killer)
+	local LootPhys = Loot:GetPhysicsObject()
+	if not IsValid(LootPhys) and IsValid(Loot.Grip) then LootPhys = Loot.Grip:GetPhysicsObject() end
+	if not IsValid(LootPhys) then return end
+	LootPhys:Wake()
+	LootPhys:ApplyForceCenter(Vector(math.random(-100, 100), math.random(-100, 100), math.random(350, 400)))
+end
+
 function GM:OnNPCKilled(Target, Killer, weapon)
 	if Target:GetClass() == "npc_zombie" then GAMEMODE:RemoveAll("npc_headcrab") end
 	if not Killer:IsPlayer() and Target.LastPlayerAttacker then Killer = Target.LastPlayerAttacker end
@@ -95,14 +106,22 @@ function GM:OnNPCKilled(Target, Killer, weapon)
 					local Chance = (Info.Chance or 0) * (1 + (Killer:GetStat("stat_luck") / 45))
 					local ItemChance = 100 / math.Clamp(Chance, 0, 100)
 					if math.random(1, (ItemChance or 100)) == 1 then
-						local Amount = math.random(Info.Min or 1, Info.Max or Info.Min or 1)
-						local Loot = CreateWorldItem(Item, Amount, Target:GetPos() + Vector(0, 0, 30))
-						Loot:SetOwner(Killer)
-						local LootPhys = Loot:GetPhysicsObject()
-						if not IsValid(LootPhys) and IsValid(Loot.Grip) then LootPhys = Loot.Grip:GetPhysicsObject() end
-						LootPhys:Wake()
-						LootPhys:ApplyForceCenter(Vector(math.random(-100, 100), math.random(-100, 100), math.random(350, 400)))
+						SpawnLoot(Target, Killer, Item, math.random(Info.Min or 1, Info.Max or Info.Min or 1))
 					end
+				end
+			end
+		end
+		local strRecipe = GAMEMODE:RollRecipeDrop(Target, Killer, NPCTable)
+		if strRecipe then
+			SpawnLoot(Target, Killer, strRecipe, 1)
+			Killer:ChatPrint("A recipe fell from " .. (NPCTable.PrintName or "your enemy") .. ": " .. (ItemTable(strRecipe).PrintName or strRecipe))
+		end
+		if NPCTable.EliteLoot then
+			for _ = 1, NPCTable.EliteLoot.Rolls or 1 do
+				local strLoot = GAMEMODE:RollEliteLoot(Target:GetLevel(), NPCTable.EliteLoot)
+				if strLoot then
+					SpawnLoot(Target, Killer, strLoot, 1)
+					GAMEMODE:AnnounceLoot(Target, strLoot)
 				end
 			end
 		end
@@ -137,6 +156,7 @@ local function NPCAdjustDamage(Victim, DamageInfo)
 		end
 		DamageInfo:SetDamage(math.Round(DamageInfo:GetDamage() + math.random(-1, math.Round(1 * (1 + (Attacker:GetStat("stat_luck") / 55))))))
 		DamageInfo:SetDamage(math.max(DamageInfo:GetDamage(), 0))
+		Attacker:CallSkillHook("on_hit", Victim, DamageInfo:GetDamage())
 		if not Attacker.EntityDamageData then
 			Attacker.EntityDamageData = {}
 		end

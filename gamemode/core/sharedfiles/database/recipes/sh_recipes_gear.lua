@@ -1,35 +1,3 @@
-local Smith = "master_blacksmithing"
-local Leather = "master_leatherworking"
-local Tailor = "master_tailoring"
-
-local Trades = {
-	slot_primaryweapon = {Smith},
-	slot_helm = {Smith},
-	slot_shoulder = {Smith, Leather},
-	slot_chest = {Smith, Tailor},
-	slot_waist = {Leather},
-	slot_offhand = {Smith, Leather},
-	slot_neck = {Smith},
-	slot_ring_1 = {Smith},
-}
-
-local ClassTrades = {
-	bow = {Leather},
-	crossbow = {Smith, Leather},
-}
-
-local StationOf = {
-	[Smith] = "smithing",
-	[Leather] = "leatherwork",
-	[Tailor] = "tailoring",
-}
-
-local SoftTrades = {
-	slot_helm = {Tailor},
-	slot_chest = {Tailor},
-	slot_waist = {Tailor},
-}
-
 local Shares = {
 	sword = {metal = 0.85, leather = 0.15},
 	axe = {metal = 0.85, leather = 0.15},
@@ -59,10 +27,9 @@ local function GroupOf(strSlot)
 end
 
 for _, Item in pairs(GM.DataBase.Items) do
-	if Item.Crafted and Item.Slot and Trades[Item.Slot] then
+	local tblTrades, boolSoft = GM:GetGearTrades(Item)
+	if tblTrades then
 		local intLevel = Item.Level or 1
-		local boolSoft = intLevel < 20 and SoftTrades[Item.Slot] ~= nil
-		local tblTrades = ClassTrades[Item.WeaponClass or ""] or (boolSoft and SoftTrades[Item.Slot]) or Trades[Item.Slot]
 		local tblShares = boolSoft and SoftShares[Item.Slot] or Shares[Item.WeaponClass or Item.Slot]
 		local intBand = GM:GetCraftBand(intLevel)
 		local intTier = GM:GetTradeTier(intLevel)
@@ -73,7 +40,8 @@ for _, Item in pairs(GM.DataBase.Items) do
 		Recipe.Group = GroupOf(Item.Slot)
 		Recipe.ItemLevel = intLevel
 		Recipe.Trade = tblTrades[1]
-		Recipe.Station = StationOf[tblTrades[1]] or "workbench"
+		Recipe.Station = GM.TradeStations[tblTrades[1]] or "workbench"
+		Recipe.Hidden = true
 		Recipe.MakeTime = 2 + intTier * 0.6
 		Recipe.GainExp = 25 + 12 * intTier
 		Recipe.Ingredients = {}
@@ -88,6 +56,7 @@ for _, Item in pairs(GM.DataBase.Items) do
 		for _, strMaster in ipairs(tblTrades) do
 			Recipe.RequiredMasters[strMaster] = intTier
 		end
+		Item.RecipeName = Recipe.Name
 		Register.Recipe(Recipe)
 	end
 end

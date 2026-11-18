@@ -74,6 +74,7 @@ function PANEL:Init()
 			local ArmorShield = Armor:AddSubMenu("Shield")
 			local ArmorShoulder = Armor:AddSubMenu("Shoulder")
 		for Item, ItemTable in pairs(GAMEMODE.DataBase.Items) do
+			if ItemTable.Generated then continue end
 			if string.find(Item, "weapon_") then
 				if string.find(Item, "_ranged_") then
 					WeaponsRanged:AddOption(Item, function() fncGivePlayerItem(Item) end)
@@ -111,7 +112,6 @@ function PANEL:Init()
 	self.MatControls = self:AddControl(self:AddMatControls())
 	self.ScaleControls = self:AddControl(self:AddScaleControls())
 	self.CameraControls = self:AddControl(self:AddCameraControls())
-
 
 	self.Frame:MakePopup()
 	self:PerformLayout()
