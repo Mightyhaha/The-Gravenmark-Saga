@@ -124,6 +124,7 @@ function SWEP:WeaponAttack()
 end
 
 function SWEP:BulletCallBack(plyShooter, trcTrace, tblDamageInfo)
+	if SERVER then GAMEMODE:PlayClashSound(self.WeaponTable, trcTrace) end
 	for strSkill, intSkillLevel in pairs(plyShooter.Data.Skills or {}) do
 		local tblSkillTable = SkillTable(strSkill)
 		if plyShooter:GetSkill(strSkill) > 0 and tblSkillTable.BulletCallBack then

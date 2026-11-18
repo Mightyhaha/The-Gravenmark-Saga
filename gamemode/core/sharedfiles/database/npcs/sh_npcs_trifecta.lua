@@ -89,6 +89,7 @@ local NPC = QuestGiver("quest_sergeant", "Sergeant Osric Varne", "Drillmaster of
 	"quest_dm_blackjory",
 	"quest_dm_sealedletter",
 })
+NPC.Voice = "hero"
 Register.NPC(NPC)
 
 local NPC = QuestGiver("quest_ulric", "Ulric of Dunmarrow", "Lord of Dunmarrow, Last of the Three Brothers", Mercs .. "merccommander.mdl", {
@@ -101,6 +102,7 @@ local NPC = QuestGiver("quest_ulric", "Ulric of Dunmarrow", "Lord of Dunmarrow, 
 	"quest_ulric_marshal",
 	"quest_ulric_writ",
 })
+NPC.Voice = "keeper_neutral"
 Register.NPC(NPC)
 
 local NPC = QuestGiver("quest_maren", "Maren Holt", "Smuggler of Kaelmoor", "models/Humans/Group03/Female_02.mdl", {
@@ -116,6 +118,7 @@ local NPC = QuestGiver("quest_halvard", "Halvard Grey", "Envoy of Vestergrim", "
 	"quest_halvard_honour",
 	"quest_halvard_seal",
 })
+NPC.Voice = "keeper_groan"
 Register.NPC(NPC)
 
 local NPC = QuickNPC("shop_quartermaster", "Hilde Rook", "npc_breen", "human", nil, "models/Humans/Group03/Female_01.mdl")
@@ -135,6 +138,7 @@ local NPC = QuickNPC("shop_smith", "Brannoc Hale", "npc_breen", "human", nil, "m
 NPC = AddBool(NPC, false, true, true)
 NPC.Title = "Master Smith"
 NPC.Shop = "shop_craftsupplies"
+NPC.Voice = "dwarf"
 NPC.DeathDistance = 14
 Register.NPC(NPC)
 

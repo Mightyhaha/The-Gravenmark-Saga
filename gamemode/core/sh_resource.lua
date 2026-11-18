@@ -54,6 +54,11 @@ if SERVER then
 	resource.AddDir("materials/icons", ".vmt")
 	resource.AddDir("materials/icons", ".vtf")
 	resource.AddDir("materials/icons/gen", ".png")
+	resource.AddDir("sound/gravenmark/clash", ".wav")
+	resource.AddDir("sound/gravenmark/voice/hero", ".ogg")
+	resource.AddDir("sound/gravenmark/voice/dwarf", ".ogg")
+	resource.AddDir("sound/gravenmark/voice/keeper_groan", ".ogg")
+	resource.AddDir("sound/gravenmark/voice/keeper_neutral", ".ogg")
 
 	GM.RequiredWorkshop = {
 		{ID = "908477738", Name = "Medieval playermodels - red side"},

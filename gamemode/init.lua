@@ -155,8 +155,10 @@ function GM:UseKeyPressed(ply)
 			UseTarget:Remove()
 		end
 	elseif UseTarget.Shop then
+		GAMEMODE:PlayNPCVoice(UseTarget, "greeting")
 		ply:ConCommand("UD_OpenShopMenu " .. UseTarget.Shop)
 	elseif UseTarget.Quest then
+		GAMEMODE:PlayNPCVoice(UseTarget, "greeting")
 		ply:ConCommand("UD_OpenQuestMenu " .. UseTarget:GetNWString("npc"))
 	elseif UseTarget.Bank then
 		ply:ConCommand("UD_OpenBankMenu " .. UseTarget:EntIndex())

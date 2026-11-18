@@ -137,6 +137,8 @@ if SERVER then
 			end
 			self.Data.Quests[strQuest].Done = true
 			self:UpdateQuest(strQuest)
+			self.UseTarget.UD_NextVoice = nil
+			GAMEMODE:PlayNPCVoice(self.UseTarget, "objectivemet")
 		end
 	end
 	concommand.Add("UD_TurnInQuest", function(ply, command, args) ply:TurnInQuest(args[1]) end)
@@ -145,14 +147,12 @@ if SERVER then
 		if not IsValid(self) then return end
 		if not IsValid(self.UseTarget) or not self.UseTarget.Quest or self.UseTarget:GetPos():Distance(self:GetPos()) > 100 then return end
 		if self:CanAcceptQuest(strQuest) then
-			if QuestTable(strQuest).StartingItems then
-				if self:HasRoomFor(QuestTable(strQuest).StartingItems) then
-					self:GiveItems(QuestTable(strQuest).StartingItems)
-					self:AddQuest(strQuest)
-				end
-			else
-				self:AddQuest(strQuest)
-			end
+			local tblStartingItems = QuestTable(strQuest).StartingItems
+			if tblStartingItems and not self:HasRoomFor(tblStartingItems) then return end
+			if tblStartingItems then self:GiveItems(tblStartingItems) end
+			self:AddQuest(strQuest)
+			self.UseTarget.UD_NextVoice = nil
+			GAMEMODE:PlayNPCVoice(self.UseTarget, "objectivenew")
 		end
 	end
 	concommand.Add("UD_AcceptQuest", function(ply, command, args) ply:AcceptQuest(args[1]) end)

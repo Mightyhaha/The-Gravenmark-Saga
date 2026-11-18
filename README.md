@@ -250,6 +250,18 @@ Smelting is a Blacksmithing recipe at an anvil or forge (`sh_recipes_smelting.lu
 
 The camera sliders orbit around your character (0 is the front). To get items to test with, use `UD_Dev_GiveItem <item> [amount]`.
 
+### Weapon clash sounds
+
+A melee hit on an armed enemy (a player, or an NPC with `HeldItems`) plays a random weapon clash from the attacker's weapon group (`sh_sounds.lua`): swords, axes, spears, and maces for hammers. Hits on unarmed creatures keep the normal impact sound. The 623 clips in `content/sound/gravenmark/clash/` were cut from the 48 recordings of "Medieval sound effects - Weapon impacts" (see Credits): every hit in a recording became its own clip, converted from 24-bit 192 kHz to 16-bit mono 44.1 kHz (the game cannot play the originals), with a short fade and even volume. The file names start with the group (`axe_`, `mace_`, `spear_`, `sword_`), so new clips dropped into the folder with the right prefix are used automatically.
+
+### NPC voices
+
+Quest givers and shopkeepers speak (`sh_sounds.lua`): a greeting when you press E on them, a "new objective" line when you accept a quest, and an "objective met" line when you hand one in. An NPC waits 4 seconds between lines (`GM.VoiceCooldown`), but accepting or handing in always plays.
+
+There are four voices, from "Voice acting sketch [Open Dungeons]" (see Credits): `hero`, `dwarf`, `keeper_groan` (gruff) and `keeper_neutral` (calm). Set one with `NPC.Voice = "dwarf"`, or `NPC.Voice = false` for a silent NPC. An NPC without one gets a fixed voice picked from its name, except NPCs with a female model, who stay silent because all four voices are male. Sergeant Osric uses `hero`, Ulric `keeper_neutral`, Halvard `keeper_groan` and Brannoc `dwarf`.
+
+The lines are in `content/sound/gravenmark/voice/<voice>/<line>_<n>.ogg`, where `<line>` is `greeting`, `objectivenew`, `objectivemet`, `objectivefailed`, `victory`, `defeat`, `enemydefeated`, `allydefeated` or `underattack`. Only the first three are used so far. The pack's dungeon-management lines about creatures were left out.
+
 ### Item icons
 
 `UD_Dev_RenderIcons` (single player) renders inventory icons from the items' own models (`cl_icon_renderer.lua`). Each item is drawn off-screen at 128 x 128 on a parchment background with fixed studio lighting, framed automatically to fill the icon, and saved to `data/gravenmark_icons/<item>.png`. The new icon shows in your inventory straight away.
@@ -340,3 +352,10 @@ Using the map editor:
 | `ud_showhud` | 1 | Show the HUD |
 | `ud_showminimap` | 1 | Show the minimap (turn off on slow machines) |
 | `ud_showcrosshair` | 1 | Show the crosshair |
+
+## Credits
+
+| Asset | Author | License |
+| --- | --- | --- |
+| Weapon clash sounds, from [Medieval sound effects - Weapon impacts](https://opengameart.org/content/medieval-sound-effects-weapon-impacts) | Ben Jaszczak and Brian Nelson (Still North Media) | CC0 |
+| NPC voices, from [Voice acting sketch [Open Dungeons]](https://opengameart.org/content/voice-acting-sketch-open-dungeons) | Eugene Loza | CC0 (dual-licensed CC0 and CC-BY-SA 3.0; used under CC0) |
