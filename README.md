@@ -22,6 +22,8 @@ Subscribe to these. A server sends them to joining players automatically (`GM.Re
 | [1941832894](https://steamcommunity.com/sharedfiles/filedetails/?id=1941832894) | The Mercenaries (PM, Ragdoll & NPC) | Sergeant, Ulric and the Gallows Company bandits (used directly as NPC models) |
 | [2210971880](https://steamcommunity.com/sharedfiles/filedetails/?id=2210971880) | TES Morrowind swords | The iron to dreadforged longswords |
 | [385795223](https://steamcommunity.com/sharedfiles/filedetails/?id=385795223) | Medieval NPC Melee Weapons | Guard shield, short, long and silvered swords, war axe; NPC melee weapons for the bandits |
+| [2905070104](https://steamcommunity.com/sharedfiles/filedetails/?id=2905070104) | zombie!! playermodels | The 11 looks of the Plague Dead and Barrow Runners |
+| [903784487](https://steamcommunity.com/sharedfiles/filedetails/?id=903784487) | Arantir | The Necromancer |
 | [104782818](https://steamcommunity.com/sharedfiles/filedetails/?id=104782818) | Rebellland Beta02b for Underdone | The old `ud_rebellland_beta_02b` map |
 
 ## Building content
@@ -59,10 +61,11 @@ All of these are placed with the map editor (`UD_Dev_EditMap`). They are defined
 
 | NPC | Where | Quests |
 | --- | --- | --- |
-| Sergeant Osric Varne (`quest_sergeant`) | Levy camp | Levels 1 to 9: gear, first kills, looting, searching chests; ends by sending you to Ulric |
-| Ulric of Dunmarrow (`quest_ulric`) | His hall | Levels 10 to 28: the Threefold Council main story |
-| Maren Holt (`quest_maren`) | North road | Levels 8 to 19: Kaelmoor smuggling side quests |
-| Halvard Grey (`quest_halvard`) | Near Ulric | Levels 20 to 27: Vestergrim side quests; receives Ulric's council writ |
+| Sergeant Osric Varne (`quest_sergeant`) | Levy camp | Levels 1 to 19: gear, first kills, looting, searching chests; ends by sending you to Ulric |
+| Ulric of Dunmarrow (`quest_ulric`) | His camp: the palisade with the mine, reached through the cave by the lighthouse | Levels 22 to 75: the Threefold Council main story |
+| Maren Holt (`quest_maren`) | North road | Levels 15 to 40: Kaelmoor smuggling side quests |
+| Halvard Grey (`quest_halvard`) | Near Ulric | Levels 45 to 68: Vestergrim side quests; receives Ulric's council writ |
+| Mother Edda (`quest_edda`) | Between the Harrow house and the chapel graveyard | Levels 36 to 125: the Barrow Dead chain (below) |
 | Hilde Rook (`shop_quartermaster`) | Levy camp | Sells gear up to level 20 and starter materials |
 | Old Bettany (`shop_provisioner`) | Levy camp | Camp cook, sells food and bedrolls |
 | Brannoc Hale (`shop_smith`) | Next to the anvil | Master smith, sells every crafting material |
@@ -70,13 +73,80 @@ All of these are placed with the map editor (`UD_Dev_EditMap`). They are defined
 
 Enemies are Morvaine (`morvaine_recruit`, `_warden`, `_soldier`, `_outrider`, `_captain`, `_knight`, `_royalguard`, boss `_marshal`) and the Gallows Company bandits (`bandit_deserter`, `_brigand`, `_sellsword`, `_veteran`, `_footknight`, `_hedgeknight`, named `bandit_jory` and `bandit_wat`, boss `bandit_raubritter`). Bandits are their own race, so they fight Morvaine too.
 
-Suggested spawn levels: recruits 2 and deserters 5 in the pines near the camp, wardens 5 on the roads, brigands 8 with Jory 10 at their camp, soldiers 8 and outriders 10 on the north road, soldiers 14 with a captain 16 at the crossing, sellswords 13 with Wat 13 and veterans 17 at the Gallows camp, knights 19 and Hallowgate Guards 20 on the far bank, hedge knights 23, Gallows knights 25 and Thorne 26 at the robber keep, knights 26 with Vane 29 at the marshal's camp. "The Old Caches" needs at least two searchable chests near the camp.
+The story is spread over levels 1 to 75, and the Rebellion legendary chain (Ulric, after "The First Sitting") runs from 100 to 150. Grinding is expected between quests. Quest experience, coin and gear scale with the quest's level (`GM.QuestRewards`, `GM:GetQuestExp`, `GM:GetQuestMoney` and `GM:GetQuestGear` in `sh_combat.lua`): the Dunmarrow quests give half a level's worth of experience, main story quests 0.9, side quests 0.4, and a gear reward is the best crafted item of its kind at or below the quest's level.
+
+The map zones on rp_bremergard_forest, in walking order:
+
+| Zone | Levels | Enemies |
+| --- | --- | --- |
+| Levy camp | 1 | None (Sergeant Varne) |
+| Road camp | 2 to 10 | Morvaine recruits 2 to 5, wardens 8 to 9, a few soldiers 10 to 14 |
+| The mountain | 8 to 30 | Deserters 8 to 12, brigands 14 to 17 with Black Jory 18, then sellswords 24 to 30 and Wat 26 near the top; Red Hal (`bandit_redhal`) as a rare around 30 |
+| Ulric's camp | hub | Ulric; the mine tunnel leads to the cave by the lighthouse |
+| The walled town | not decided | |
+| The lighthouse | 20 to 37 | Morvaine outriders 20 to 25, soldiers 30 to 35, a captain 37 |
+| The Harrow house | 35 to 60 | Plague Dead and Barrow Runners 35 to 45, Bloated Dead 44 to 50, skeletons 50 to 60 |
+| The Gallows tent camp | 40 to 61 | Veterans 40 to 48, Gallows knights 50 to 57, hedge knights 58 to 60, Sir Gaspard Thorne 61 |
+| Outpost outside the Morvaine castle | 40 to 55 | Knights 40 to 50, Hallowgate Guards 50 to 55 |
+| The Morvaine castle | 60 to 100 | Knights and Hallowgate Guards 60 to 100, Marshal Vane 70 |
+| The chapel graveyard and catacombs | 85 to 125 | Skeletons 85 to 105, Barrow Lord 92 to 100, zombie guards 110 to 115, the Necromancer 125 |
+
+| Quest | Level | Kill targets and where |
+| --- | --- | --- |
+| Green Steel | 2 | Recruits 2 to 4, road camp |
+| Wardens on the Road | 8 | Wardens 8 to 9, road camp |
+| Turncloaks in the Pines | 10 | Deserters 10 to 11, the mountain |
+| Iron for the Levy | 13 | Soldiers 13 to 14, road camp |
+| Black Jory | 16 | Brigands 16 to 17, Jory 18, the mountain |
+| A Loose Tongue | 24 | Sellswords 24 to 25, Wat 26, the mountain |
+| The Threefold Council | 35 | Soldiers 34 to 35, a captain 37, the lighthouse |
+| Night Crossing, Grell's Pride | 40, 42 | Knights 40 to 43, outpost outside the castle |
+| The Nephew's Warning | 50 | Soldiers 48 to 50, Hallowgate Guards 50 to 52, outpost outside the castle |
+| Grell's Honour | 55 | Gallows knights 55 to 57, tent camp |
+| The Robber Knight | 58 | Hedge knights 58 to 60, Thorne 61, tent camp |
+| The Marshal of the Crossing | 67 | Knights 66 to 68, Vane 70, the Morvaine castle |
+
+Sir Gaspard Thorne (`bandit_raubritter`) belongs at the tent camp around level 61; spawned lower, he is far stronger than anything near him. Outriders and veterans aren't quest targets and are good grinding packs. Between 75 and 100 there are no new quests except Mother Edda's Barrow Lord (92) and Ledger (100); the Morvaine castle is the grinding ground for that range, and its top levels lead into the Rebellion chain. "The Old Caches" needs at least two searchable chests near the camp.
+
+**The Barrow Dead** (`sh_npcs_undead.lua`, race `undead`) fight everyone, Morvaine and bandits included. Skeletons are `npc_citizen` wearing Garry's Mod's own `models/player/skeleton.mdl` as a `SkinModel`, with held items and their voices muted (`NPC.Mute`); they clatter apart when they die (`NPC.DeathSound`). The zombies are HL2's own zombies, so they move and attack like them, with their headcrabs taken off (`NPC.NoHeadcrab`): the headcrab bodygroups are hidden at spawn, and any headcrab that pops out of one on death is removed. The Plague Dead and Barrow Runners wear one of the 11 zombie playermodels at random; the Bloated Dead keep HL2's poison zombie, tinted a grave grey-green.
+
+The Necromancer (`undead_necromancer`, the Arantir model) raises two skeletons from the ground every 12 seconds while he has an enemy, up to four at a time, 3 levels below his own (`NPC.Summon`). Raised skeletons give a quarter of the usual experience (`GM.SummonExpShare`) and no loot, and they crumble when he dies. He carries Gravecaller (`unique_gravecaller`), his staff, which is also the reward for killing him.
+
+| NPC | Base | Suggested levels |
+| --- | --- | --- |
+| Plague Dead (`undead_plaguedead`) | HL2 zombie in a zombie playermodel, slow and tough | 35 to 45, Harrow house yard |
+| Barrow Runner (`undead_runner`) | HL2 fast zombie in a zombie playermodel, fragile | 38 to 45, Harrow house yard |
+| Bloated Dead (`undead_bloated`) | HL2 poison zombie, no headcrabs to throw | 44 to 50, Harrow house yard |
+| Risen Bones (`undead_risen`) | Skeleton, rusty sword | 50 to 54 in the Harrow house, 85 to 95 in the catacombs |
+| Grave Spearman (`undead_gravespear`) | Skeleton, spear | 55 to 60 in the Harrow house, 90 to 105 in the catacombs |
+| Barrow Guard (`undead_barrowguard`) | Skeleton, sword and shield | 55 to 60 in the Harrow house, 90 to 105 in the catacombs |
+| Barrow Lord (`undead_bonelord`), elite | Skeleton, longsword and shield | 92 to 100, catacombs |
+| Zombie guards around the Necromancer | Any of the zombies | 110 to 115, deepest crypt |
+| The Necromancer (`undead_necromancer`), boss | Arantir, raises skeletons | 125, deepest crypt |
+
+Mother Edda's quests (`sh_quest_barrows.lua`), each needing the one before:
+
+| Quest | Level | Task | Reward |
+| --- | --- | --- | --- |
+| The Restless Field | 36 | Kill 8 Plague Dead | Coin, 2 healthkits |
+| Runners in the Rows | 40 | Kill 6 Barrow Runners | Boots, coin |
+| Grave-Tokens | 44 | Bring 6 Grave-Tokens (any zombie, while on the quest) | Helmet, coin |
+| The Swollen Dead | 48 | Kill 3 Bloated Dead and 6 Plague Dead | Dunmarrow Oathring, coin |
+| The Harrow Cellar | 52 | Kill 10 Risen Bones | Coin, 4 healthkits |
+| The Old Watch | 57 | Kill 6 Grave Spearmen and 4 Barrow Guards | Spear |
+| The Barrow Lord | 92 | Kill the Barrow Lord and 6 Barrow Guards | Chest piece, coin |
+| The Ledger of Names | 100 | Bring 5 Ledger Pages (any skeleton; the Barrow Lord always drops 2) | Coin |
+| Who Wakes the Barrows | 125 | Kill the Necromancer | Gravecaller, Ashen Vow, coin |
+
+Gravecaller (`sh_items_zy_undead.lua`) is an epic level 125 spear-class staff built on the Gravensteel spear, tinted grave-green with a green glow. Each kill with it heals 8% of your health.
 
 ### Equipment slots
 
 Slots are defined in `gamemode/core/sharedfiles/database/items/sh_slots.lua`. `Position` places the slot in the paperdoll panel (percent of its width and height). A slot with `NoModel = true` gives stats only and attaches nothing to the character, like the necklace and ring slots.
 
-Slots that share a `Group` accept the same items. Rings use `Item.SlotGroup = "ring"` and fit either ring slot; a player who owns two of the same ring can wear both. Double-clicking a ring puts it in a free ring slot (or takes it off if it's worn), and dragging it onto a ring slot puts it in that one. Another slot with `Group = "ring"` adds a third ring slot without touching any items.
+Slots that share a `Group` accept the same items. Rings use `Item.SlotGroup = "ring"` and fit either ring slot; a player who owns two of the same ring can wear both. The boots slot attaches to `ValveBiped.Bip01_R_Foot` and mirrors the same model onto `ValveBiped.Bip01_L_Foot` (`SLOT.MirrorAttachment`), so you build the right boot only. With `SLOT.RestAligned` the attachment is turned so that, in the standing pose, its forward, left and up match the body's; the offset is measured once per playermodel from its idle pose (`GM:GetRestOffset`).
+
+Double-clicking a ring puts it in a free ring slot (or takes it off if it's worn), and dragging it onto a ring slot puts it in that one. Another slot with `Group = "ring"` adds a third ring slot without touching any items.
 
 ### NPCs wearing other models (bonemerge)
 
@@ -104,6 +174,57 @@ The base NPC still does the AI and animation, but each client draws the `SkinMod
 An item whose model has `BoneMerge = true` (the Morrowind longswords) snaps onto the hand bones instead of using offsets, on players and on NPCs.
 
 The Medieval NPC Melee Weapons addon also gives NPC weapons that show their own sword and shield and run their own melee AI (`npc_short_sword`, `npc_short_sword_shield`, `npc_long_sword`, `npc_long_sword_shield`, `npc_silver_sword`, `npc_silver_sword_shield`, `npc_medieval_axe`, `npc_axe_shield`). Use them as `NPC.Weapon` without `HeldItems`, as the Gallows Company does. The gamemode cancels their view kick and knockback on players and undoes the fixed health they set on their owner.
+
+### Day and night
+
+`sh_daynight.lua` runs a clock: a full day takes 48 real minutes (`GM.DayNight.CycleMinutes`), starting at 09:00 when the map loads. Day is 07:00 to 19:00, dusk 19:00 to 21:00, night until 05:00 and dawn until 07:00. The time shows in the top-left corner of the minimap.
+
+- The map's own lighting is dimmed through light style 0 (`engine.LightStyle`), from `m` by day to `c` at night, in small steps across dusk and dawn. Each step makes clients reload the lightmaps, which can stutter for a moment. Only the ground and buildings are relit: relighting the map's static models (`render.RedownloadAllLightmaps(true)`) turns the distant trees dark on this map, so trees and rocks keep their daytime light and night fog darkens them with distance instead. The fog fades in from the map's own fog toward a near-black blue that closes in at 2200 units (`NightFogEnd`, `NightFogDensity`), and nothing is reloaded at all until the first dusk.
+- The sky is darkened with an overlay, and at night every player carries a small warm light so the forest isn't pitch black. `ud_lantern 0` turns that light off for yourself.
+- At nightfall and dawn every player gets an announcement in the middle of the screen and in chat.
+- The undead hit 25% harder at night (`GM.DayNight.NightUndeadDamage`).
+- `UD_Dev_SetTime <hour>` sets the clock, for example `UD_Dev_SetTime 22`.
+
+### Patrols and night monsters
+
+`sh_world.lua`, placed with the map editor's **Patrol routes** mode.
+
+- **Patrol routes** are lines of points. NPCs from a spawn point with that route's number walk it in a loop (two points walk back and forth; three or more go round and back to the first). They break off to fight and pick the route up again afterwards, starting from the nearest point. A one-point route sends them to that spot and keeps them there.
+- **Day or night spawns:** a spawn point can spawn **Always**, **Only at night** or **Only by day**. Out of their time, NPCs that aren't fighting vanish in a puff of dust and come back when their time returns. Use night-only spawn points for rare night creatures.
+- **Night monsters:** tick **A night monster may roam this route** on a route and set the monster's level. Each nightfall there is a 60% chance (`GM.NightRoamerChance`) that, 20 to 90 seconds later, one of the night monsters (`GM.NightRoamers`) appears at the start of a random ticked route and walks it. Everyone gets an announcement, naming the place if the route has a name. If it's still alive at dawn and not fighting, it fades away. Whoever kills it is announced to everyone. Only one walks at a time.
+- The night monsters (`sh_npcs_roamers.lua`) are bosses with elite loot (two rolls, and a good chance of a gem):
+  - **The Gravewight**, "Walker of the Night Roads": a skeleton with an iron longsword. It raises Risen Bones as it walks, slams the ground and goes into a rage at 30%.
+  - **The Pale Knight**, "Who Rides After Midnight": a see-through ghostly knight with a silver longsword and a guard shield. It steps behind its target, slams, turns half-ethereal at half health (takes 80% less damage for 5 seconds) and rages at 25%.
+- `UD_Dev_SummonRoamer [route] [npc]` spawns one straight away, for example `UD_Dev_SummonRoamer 3 roamer_paleknight`.
+
+### Melee AI
+
+Hostile humans and skeletons are `npc_citizen`, whose own AI hangs back, strafes and runs from danger. `sh_npc_melee_ai.lua` takes over while they have an enemy: four times a second it makes them run straight at their target, and swing once they are within `GM.MeleeAI.Reach` units. The leash (`DistanceRetreat`) still sends them home when they are pulled too far. Hostile NPCs attack players of any level; the old Underdone rule that left players above an NPC's level alone is gone.
+
+### Boss abilities
+
+`sh_bosses.lua` gives NPCs abilities through `NPC.Abilities`, a list of entries, and `NPC.Boss = true` shows a health bar at the top of the screen to everyone within 1200 units. An entry with `Health` fires once when the NPC drops to that share of its health; one with `Interval` fires every so many seconds (randomised by 15%, first after `FirstDelay`, default 4) while it has an enemy and the ability can be used.
+
+| Type | What it does | Settings |
+| --- | --- | --- |
+| `slam` | A red circle grows on the ground under the boss, then everyone inside is hit (the boss's normal hit times `Damage`) and knocked back. Step out of the circle. | `Radius`, `Range` (only used when the target is this close), `Windup`, `Damage`, `Sound` |
+| `enrage` | Hits harder from then on, glows red and the health bar turns orange. | `Damage`, `Line`, `Sound` |
+| `warcry` | Every NPC of its race nearby hits harder for a while and glows amber. | `Radius`, `Damage`, `Duration`, `Line`, `Sound` |
+| `guard` | Takes much less damage for a few seconds and glows blue. Wait it out. | `Duration`, `Reduction`, `Line` |
+| `blink` | Vanishes in dust: away from a target that gets too close, or with `Behind = true` to just behind the target. | `Range`, `Behind`, `Sound` |
+| `summon` | Calls NPCs. By default they rise from the ground and crumble when the boss dies; `Rise = false` and `Bound = false` make them walk in and stay, for soldiers. They give a quarter of the experience and no loot. | `NPC` (list), `Count`, `Max`, `LevelOffset`, `Line`, `Sound` |
+
+`Line` is announced to players near the boss. The bosses so far:
+
+| Boss | Abilities |
+| --- | --- |
+| Black Jory (18) | Rages at 40% |
+| Red Hal (around 30) | War cry every 22 seconds, rages at 35% |
+| Sir Gaspard Thorne (61) | Slam, war cry at 60%, rages at 30% |
+| Lord-Marshal Vane (70) | Raises his guard every 16 seconds, slam, rings a bell for two soldiers or knights at 50%, rages at 25% |
+| Barrow Lord (92 to 100) | Slam, rages at 35% |
+| The Necromancer (125) | Raises skeletons every 12 seconds, blinks away when you close in, tears open the graves for three more at 50%, rages at 20% |
+| The Gravewight, The Pale Knight | See Night monsters |
 
 ### Medieval weapons
 
@@ -137,7 +258,7 @@ Only a few weapon shapes exist (Bremergard sword, axe, spear and hammer, the fiv
 
 ### Medieval armor
 
-Slots open by item level. Chest and off hand are open from 1, the waist from 10, the helmet from 15 and shoulders from 20. `GM.SlotUnlockLevel` in `sh_combat.lua` holds the numbers, and `sh_items_zz_slotlevels.lua` raises any item in those slots to its unlock level, including leftover Underdone items. Rings and necklaces are in Jewelry below.
+Slots open by item level. Chest and off hand are open from 1, boots from 5, the waist from 10, the helmet from 15 and shoulders from 20. `GM.SlotUnlockLevel` in `sh_combat.lua` holds the numbers, and `sh_items_zz_slotlevels.lua` raises any item in those slots to its unlock level, including leftover Underdone items. Rings and necklaces are in Jewelry below.
 
 `sh_items_armor_medieval.lua` builds armor out of base-game shapes, textured with the Bremergard pack's leather, iron, steel and wood, and fitted to the default player body. A set arrives every 20 levels. Each set is four pieces (helmet, chest, shoulders, belt) with a set bonus; shields are a separate ladder at the same levels and are not part of a set, so ranged builds are not penalised.
 
@@ -152,11 +273,13 @@ Slots open by item level. Chest and off hand are open from 1, the waist from 10,
 | 120 | Gravenwarden Plate | Gravensteel Helm, Cuirass, Pauldrons, Belt | Gravensteel Round Shield |
 | 140 | Dreadforged Regalia | Dreadforged Great Helm, Cuirass, Pauldrons, Belt | Dreadforged Guard Shield |
 
+Boots are their own ladder and not part of any set: Leather Boots (5), Iron-Shod Boots (20), then Steel, Silver, Glass, Ebony, Gravensteel and Dreadforged Sabatons at 40, 60, 80, 100, 120 and 140.
+
 How the numbers are set, all in `sh_combat.lua`:
 
-- Armor per piece is `GM:GetArmorTierValue(slot, level)`. It takes the combat armor curve (`10 + 3 x level`) 6 levels ahead of the piece's level and splits it by slot share (chest 1.5, shield 1.2, helmet, shoulders and belt 1 each) across only the slots open at that level. A full set therefore always matches the curve, and the early pieces are not under-armored because later slots are not open yet. The gap between sets means you take a little less damage than the curve right after a new set and a little more just before the next one.
+- Armor per piece is `GM:GetArmorTierValue(slot, level)`. It takes the combat armor curve (`10 + 3 x level`) 6 levels ahead of the piece's level and splits it by slot share (chest 1.5, shield 1.2, helmet, shoulders and belt 1 each, boots 0.3) across only the slots open at that level. A full set therefore always matches the curve, and the early pieces are not under-armored because later slots are not open yet. The gap between sets means you take a little less damage than the curve right after a new set and a little more just before the next one.
 - Price is `16 x level^1.5` for weapons (`GM:GetGearPrice`). Armor uses 0.6 times its slot share of that (`GM:GetArmorPrice`).
-- Piece buffs: helmets give max health equal to half the level; shoulders and belts give strength equal to level / 60 from level 30. The set bonus is max health equal to the level and strength equal to level / 40 (at least 1).
+- Piece buffs: helmets give max health equal to half the level; shoulders and belts give strength equal to level / 60 from level 30. Boots are mostly for speed: they add `6 + level / 4` move speed (`stat_movespeed`, a hidden stat added straight to walk and run speed, base 270; `GM.Combat.BootSpeedBase` and `BootSpeedPerLevel`) and agility equal to level / 60 from level 30. The set bonus is max health equal to the level and strength equal to level / 40 (at least 1).
 
 The sets reuse the same prop-built shapes (three helmet shapes, the gambeson and breastplate, one pair of pauldrons, the sword belt and quilted belt, and the buckler, round and guard shields) with the metal parts re-textured and tinted per tier. Fit and tweak any of them with the armor builder.
 
@@ -173,7 +296,7 @@ The sets reuse the same prop-built shapes (three helmet shapes, the gambeson and
 | Pendant | 30, 50, 70 ... 150 | Max health, 0.7 x level |
 | Talisman | same | Luck, level / 6 |
 
-Rings are not sold in shops. From level 45 there are six unique rings that are meant to come from quests (`Item.QuestReward = true`): Dunmarrow Oathring (45), Kaelmoor Smuggler's Signet (65), Council Seal Ring (85), Gravenmark Wardenband (105), Ashen Vow (125) and Valcrest Signet (145). No quest hands them out yet; add them to a quest's `GainedItems` when the content above level 30 is written.
+Rings are not sold in shops. From level 45 there are six unique rings that are meant to come from quests (`Item.QuestReward = true`): Dunmarrow Oathring (45), Kaelmoor Smuggler's Signet (65), Council Seal Ring (85), Gravenmark Wardenband (105), Ashen Vow (125) and Valcrest Signet (145). Mother Edda gives the Dunmarrow Oathring (The Swollen Dead) and the Ashen Vow (Who Wakes the Barrows); the others are not handed out yet.
 
 ### Loot rarity
 
@@ -230,6 +353,19 @@ Ulric's questline "The Rebellion" starts at level 100 after "The First Sitting".
 
 Wearing all three gives the "Regalia of the Rebellion" set bonus. Every stage of the sword counts as the sword for the set (later stages have `BaseItem = "legendary_rebellion_1"`). The quest story text is a first draft.
 
+### Gems and sockets
+
+Gems (`sh_gems.lua`, `sh_items_gems.lua`) socket into gear for small extra stats. There are five kinds, ruby (Strength), emerald (Dexterity), sapphire (Max Health), topaz (Agility) and amethyst (Luck), in eight grades that follow the craft bands: Chipped (1), Rough (20), Flawed (40), Cut (60), Clear (80), Bright (100), Flawless (120) and Perfect (140). A gem gives `GM:GetAffixStat(stat, grade level, 0.05)`, a small share of what a piece of gear gives at that level.
+
+Weapons have one socket, two if they are epic, legendary or unique. Helmets, chests, shoulders, belts, off hands and boots have one. Necklaces and rings have none.
+
+- **Where gems come from:** every mined vein has a 4% chance (more with Luck) to give a gem of the ore's band. Elites drop one 25% of the time and bosses (`EliteLoot.Rolls` 2 or more) 50%, of the band of their level. Summoned NPCs drop none.
+- **Socketing:** double-click a gem to set it into your worn weapon, or the first worn armor piece with a free socket. Or right-click it and pick any worn or carried item under "Socket into ...". The item's tooltip lists each socket, filled or empty.
+- **Removing:** right-click a socketed item and choose "Remove gems". You get the gems and the plain item back, for half the gems' value in denars.
+- **How it is stored:** a socketed item is its own item name, `<item>__gem_<kind>_<grade>`, with one part per gem, built on demand from that name on the server and client. Saving, trading, banks and shops treat it like any other item, and set bonuses still count it as the original piece.
+- **Tuning:** `GM.Gems` holds the stat budget, drop chances, removal fee and which armor slots get a socket.
+- **Testing:** `UD_Dev_GiveGems <grade>` gives one of each kind; `UD_Dev_GiveItem gem_ruby_3` gives one gem.
+
 ### Crafting
 
 Three trades replace the old Underdone ones: **Blacksmithing**, **Leatherworking** and **Tailoring**. Trades level from tier 1 to 15 in the Character tab. A recipe needs the trade tier `ceil(item level / 10)`, so a level 30 sword needs tier 3 and a level 150 sword tier 15. Mining (below) is a fourth trade. You can hold 60 tiers in total, enough for all four trades at 15, and you pay one tier at a time with the arrow button once the bar is full. Crafting gives trade experience (`25 + 12 x tier`, scaled down when the recipe is easy for you), and a craft always succeeds when you meet the requirements.
@@ -267,7 +403,7 @@ Only the main prop is solid; the decoration is drawn on every client around it. 
 | 7 | 120 to 139 | Gravensteel Ingot | Direwolf Hide | Gilded Brocade |
 | 8 | 140 to 150 | Dreadforged Ingot | Wyrmhide | Royal Velvet |
 
-**Where materials come from.** Metal comes from mining ore and smelting it (below). Every Morvaine and Gallows Company enemy drops the cloth of its own level band (4% chance, one at a time, `GM.Combat.ClothDropChance`) and, rarely, its leather (0.5%, one at a time, `GM.Combat.LeatherDropChance`), so what drops follows the level you spawn the enemy at. Brannoc Hale (`shop_smith`, shop `shop_craftsupplies`) sells bands 1 and 2 only (`GM.Combat.ShopMaterialMaxBand`), and the Dunmarrow Quartermaster sells band 1. The level 7 quest "Iron for the Levy" hands out a starter bundle and three starter recipes.
+**Where materials come from.** Metal comes from mining ore and smelting it (below). Every Morvaine and Gallows Company enemy drops the cloth of its own level band (4% chance, one at a time, `GM.Combat.ClothDropChance`) and, rarely, its leather (0.5%, one at a time, `GM.Combat.LeatherDropChance`), so what drops follows the level you spawn the enemy at. Brannoc Hale (`shop_smith`, shop `shop_craftsupplies`) sells bands 1 and 2 only (`GM.Combat.ShopMaterialMaxBand`), and the Dunmarrow Quartermaster sells band 1. The level 13 quest "Iron for the Levy" hands out a starter bundle and three starter recipes.
 
 **Recipes.** Gear recipes have to be learned (`sh_items_zz_zrecipescrolls.lua`). Every craftable weapon, armor piece and piece of jewelry has a recipe scroll named after its trade: "Smith's Notes: Steel Longsword", "Tanner's Pattern: ...", "Tailor's Pattern: ...", "Bowyer's Notes: ..." for bows and crossbows, and "Jeweller's Sketch: ..." for rings and necklaces. Use a scroll to learn the recipe for good (it is kept in your library and saved). A scroll for a recipe you already know can be sold or given away. Every equipment set with two or more crafted pieces also has a folio, for example "Folio: Warden's Plate", that teaches the whole set at once. Smelting recipes are always known.
 
@@ -370,16 +506,18 @@ To keep the icons, copy the PNG files from `garrysmod/data/gravenmark_icons/` to
 
 ### Skills and leveling
 
-Characters can reach level 150. Each level needs more experience than the last (25 x level + 1.5 x level², about 6,000 equal-level kills from 1 to 150), and every level adds 6 max health and, every third level, 1 Strength and 1 Dexterity. Admins can use `UD_Admin_GiveExp <amount> [name]` and `UD_Admin_SetLevel <level> [name]`.
+Characters can reach level 150. Each level needs more experience than the last (25 x level + 1.5 x level², about 12,000 equal-level kills from 1 to 150), and every level adds 6 max health and, every third level, 1 Strength and 1 Dexterity. Admins can use `UD_Admin_GiveExp <amount> [name]` and `UD_Admin_SetLevel <level> [name]`.
 
 | Level | Experience to next level | Equal-level kills per level |
 | --- | --- | --- |
-| 1 | 26 | about 9 |
-| 10 | 400 | about 12 |
-| 25 | 1,562 | about 19 |
-| 50 | 5,000 | about 30 |
-| 100 | 17,500 | about 53 |
-| 149 | 37,026 | about 75 |
+| 1 | 26 | about 18 |
+| 10 | 400 | about 24 |
+| 25 | 1,562 | about 38 |
+| 50 | 5,000 | about 60 |
+| 100 | 17,500 | about 106 |
+| 149 | 37,026 | about 150 |
+
+A kill gives the enemy's max health x its level / your level / 12 (`GM.KillExp` in `sh_combat.lua`). The level ratio is held between 0.25 and 1.5, so enemies far above you don't give runaway experience and grey enemies still give a little.
 
 You get one skill point per level and a bonus point every 10 levels (165 at level 150). The Skills tab in the main menu shows five branches: The Sword-Arm (melee), The Fletcher's Eye (ranged), The Bulwark (defense), The Wayfarer (food, rest, carrying, coin) and The Banner (luck, experience, squad auras). New rows unlock at levels 1, 5, 12, 20, 30, 45, 60, 80, 105, 130 and 150, each skill needs the one above it, and each branch ends in a capstone at level 150 that costs 5 points. Click a skill with a gold border to learn it; **Forget skills** refunds everything for 20 denars per level (at least 100).
 
@@ -414,7 +552,11 @@ Using a prop whose model is listed in `GM.SearchableProps` (`gamemode/init.lua`)
 
 | Console command | What it does |
 | --- | --- |
-| `UD_Dev_EditMap` | Opens or closes the map editor for NPC spawn points and props. Layouts are saved per map to `data/underdone/Maps/<map>.txt`. |
+| `UD_Dev_EditMap` | Opens or closes the map editor for NPC spawn points, props, player spawns, ore veins and patrol routes. Layouts are saved per map to `data/underdone/Maps/<map>.txt`. |
+| `UD_Dev_SetTime <hour>` | Sets the time of day, 0 to 24. Without a number it prints the time. |
+| `UD_Dev_SummonRoamer [route] [npc]` | Spawns a night monster on a ticked route, or on the route number given. |
+| `UD_Dev_GiveGems <grade>` | Gives one gem of each kind, grade 1 to 8. |
+| `UD_ResetCharacter confirm` | Wipes your character (level, items, bank, skills, quests, trades) and starts a new one. Your old save is copied to `data/underdone/backups/` first. In single player the map restarts; on a server you are kicked and start fresh when you rejoin. Anyone can use it on themselves. |
 | `UD_Dev_EditPaperDoll` | The armor builder: design or adjust worn equipment from props and copy the item Lua. |
 | `UD_Dev_RenderIcons [filter] [force]` | Renders item icons from the item models into `data/gravenmark_icons/` (see Item icons). |
 | `UD_Dev_EditPaperDoll_Debug` | Prints what the armor builder and your character are drawing, for tracking down display problems. |
@@ -431,6 +573,8 @@ Using the map editor:
 - A spawn point spawns **How many NPCs** at once, randomly inside its **Spawn area radius** (0 means exactly on the marker). Each one respawns its own **Respawn** seconds after dying.
 - **Ore veins** mode places mineable rocks: pick the ore, the stone model and the respawn time, then Add. Click a vein's marker to change, move or remove it.
 - **Player spawns** mode places where players appear, facing the arrow's direction. Players spawn at a random one that nobody is standing on; with none placed, the map's own spawn is used.
+- Spawn points also take a **Patrol route #** (0 keeps them where they spawn) and when they spawn: **Always**, **Only at night** or **Only by day**. The marker label shows both.
+- **Patrol routes** mode: click the ground and press **Start a new route here**, then keep clicking to add points; the route is drawn as a loop of orange lines (purple if a night monster may roam it). Click a point of another route to switch to it. Give it a place name (used in night monster announcements), tick **A night monster may roam this route** and set the monster's level, then **Apply changes**. **Remove last point** undoes a click. Routes are also drawn in NPC spawn point mode, so you can see which number to give a spawn point.
 - Press **Save map** when you are done; the window shows when there are unsaved changes.
 
 ## Client options
@@ -440,6 +584,7 @@ Using the map editor:
 | `ud_showhud` | 1 | Show the HUD |
 | `ud_showminimap` | 1 | Show the minimap (turn off on slow machines) |
 | `ud_showcrosshair` | 1 | Show the crosshair |
+| `ud_lantern` | 1 | Carry a small light at night |
 
 ## Credits
 

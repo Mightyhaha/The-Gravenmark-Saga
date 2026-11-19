@@ -28,6 +28,7 @@ GM.GearTrades = {
 	slot_shoulder = {"master_blacksmithing", "master_leatherworking"},
 	slot_chest = {"master_blacksmithing", "master_tailoring"},
 	slot_waist = {"master_leatherworking"},
+	slot_boots = {"master_leatherworking", "master_blacksmithing"},
 	slot_offhand = {"master_blacksmithing", "master_leatherworking"},
 	slot_neck = {"master_blacksmithing"},
 	slot_ring_1 = {"master_blacksmithing"},

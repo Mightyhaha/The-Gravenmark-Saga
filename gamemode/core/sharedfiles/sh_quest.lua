@@ -1,19 +1,5 @@
 local Player = FindMetaTable("Player")
 
---The Quests from this point down have not been added to any npc yet, and probolly are under cunstruction
-local Quest = {}
-Quest.Name = "quest_gatherantlionshell"
-Quest.PrintName = "The Legendary Beast!"
-Quest.Story = "Hey! You! Yeah, you! I can help you. Have you ever heard of a beast called, the Antlion Guard!? I hear it has a shell as hard as rock! Bring me its shell, and i can make you a shield. It wont be free tho. I'll need some cash too!"
-Quest.Level = 40
-Quest.ObtainItems = {}
-Quest.ObtainItems["antlion_shell"] = 1
-Quest.ObtainItems["money"] = 500
-Quest.GainedExp = 600
-Quest.GainedItems = {}
-Quest.GainedItems["armor_shield_antlionshell"] = 1
-Register.Quest(Quest)
-
 function Player:AddQuest(strQuest, tblInfo)
 	if not IsValid(self) then return end
 	local tblQuestTable = QuestTable(strQuest)
@@ -137,8 +123,7 @@ if SERVER then
 			end
 			self.Data.Quests[strQuest].Done = true
 			self:UpdateQuest(strQuest)
-			self.UseTarget.UD_NextVoice = nil
-			GAMEMODE:PlayNPCVoice(self.UseTarget, "objectivemet")
+			GAMEMODE:PlayNPCVoice(self.UseTarget, "objectivemet", self, true)
 		end
 	end
 	concommand.Add("UD_TurnInQuest", function(ply, command, args) ply:TurnInQuest(args[1]) end)
@@ -151,8 +136,7 @@ if SERVER then
 			if tblStartingItems and not self:HasRoomFor(tblStartingItems) then return end
 			if tblStartingItems then self:GiveItems(tblStartingItems) end
 			self:AddQuest(strQuest)
-			self.UseTarget.UD_NextVoice = nil
-			GAMEMODE:PlayNPCVoice(self.UseTarget, "objectivenew")
+			GAMEMODE:PlayNPCVoice(self.UseTarget, "objectivenew", self, true)
 		end
 	end
 	concommand.Add("UD_AcceptQuest", function(ply, command, args) ply:AcceptQuest(args[1]) end)

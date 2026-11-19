@@ -6,6 +6,7 @@ local VariantSlots = {
 	slot_chest = true,
 	slot_shoulder = true,
 	slot_waist = true,
+	slot_boots = true,
 }
 
 local function ItemKind(tblItem)

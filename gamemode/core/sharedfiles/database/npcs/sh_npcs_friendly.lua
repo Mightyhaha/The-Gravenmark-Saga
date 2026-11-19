@@ -25,20 +25,6 @@ local function AddDrop(Table, Name, Chance, Min, Max,strDefaultChance)
 	return Table
 end
 
-local NPC = QuickNPC("rebel_smg", "Rebel Guard", "npc_combine_s", "human", 50, "models/Humans/Group03/Male_02.mdl")
-NPC = AddBool(NPC, false, true, false)
-NPC = AddMultiplier(NPC, 100, 7)
-NPC.Weapon = "weapon_smg1"
-NPC.DeathDistance = 14
-Register.NPC(NPC)
-
-local NPC = QuickNPC("human_turret(f)", "Human Turret(Floor)", "npc_turret_floor", "human")
-NPC = AddMultiplier(NPC, 20, 3)
-NPC = AddBool(NPC, true, false, false)
-NPC.Accuracy = WEAPON_PROFICIENCY_POOR
-NPC.DeathDistance = 14
-Register.NPC(NPC)
-
 local NPC = QuickNPC("shop_general", "Jay", "npc_eli", "human")
 NPC = AddBool(NPC, false, true, true)
 NPC.Shop = "shop_general"
@@ -84,33 +70,5 @@ Register.NPC(NPC)
 local NPC = QuickNPC("shop_books", "Richard", "npc_citizen", "human", nil, "models/Humans/Group03/Male_02.mdl")
 NPC = AddBool(NPC, false, true, true)
 NPC.Shop = "shop_books"
-NPC.Deathdistance = 14
-Register.NPC(NPC)
-
-local NPC = QuickNPC("quest_Odessa", "Odessa", "npc_breen", "human", nil, "models/odessa.mdl")
-NPC = AddBool(NPC, false, true, true)
-NPC.Quest = {"quest_killantlionboss"}
-NPC.DeathDistance = 14
-Register.NPC(NPC)
-
-local NPC = QuickNPC("quest_Adam", "Adam", "npc_breen", "human", nil, "models/Humans/Group03/Male_02.mdl")
-NPC = AddBool(NPC, false, true, true)
-NPC.Quest = {"quest_killzombies", "quest_monkeybusiness", "quest_killantlion",
-"quest_zombieblood", "quest_beer", "quest_killelite", "quest_killzombine",
-"quest_cooking"}
-NPC.DeathDistance = 14
-Register.NPC(NPC)
-
-local NPC = QuickNPC("quest_kleiner", "Dr. Kleiner", "npc_kleiner", "human")
-NPC = AddBool(NPC, false, true, true)
-NPC.Quest = {"quest_killcombinethumper", "quest_killcombine",
-"quest_toolwrench", "quest_armorupgrade","quest_missionthors",
-"quest_fortification","quest_oil", "quest_crafting",}
-NPC.DeathDistance = 14
-Register.NPC(NPC)
-
-local NPC = QuickNPC("quest_charple", "Some Burnt Guy", "npc_citizen", "human", nil, "models/player/charple.mdl")
-NPC = AddBool(NPC, false, true, true)
-NPC.Quest = { "quest_cquest1", "quest_cquest2", "quest_detergentq"}
 NPC.Deathdistance = 14
 Register.NPC(NPC)

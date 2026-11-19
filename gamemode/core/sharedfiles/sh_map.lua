@@ -3,6 +3,7 @@ GM.MapEntities.NPCSpawnPoints = {}
 GM.MapEntities.WorldProps = {}
 GM.MapEntities.PlayerSpawns = {}
 GM.MapEntities.OreVeins = {}
+GM.MapEntities.PatrolRoutes = {}
 
 if SERVER then
 	local DefaultPropModel = "models/props_junk/wood_crate001a.mdl"
@@ -18,7 +19,7 @@ if SERVER then
 		local ply = EditorPlayer()
 		local Spawn = GAMEMODE.MapEntities.NPCSpawnPoints[intKey]
 		if not ply or not Spawn then return end
-		SendNetworkMessage("UD_UpdateSpawnPoint", ply, {intKey, Spawn.Position, Spawn.Angle, Spawn.NPC, Spawn.Level, Spawn.SpawnTime, Spawn.Radius, Spawn.Count})
+		SendNetworkMessage("UD_UpdateSpawnPoint", ply, {intKey, Spawn.Position, Spawn.Angle, Spawn.NPC, Spawn.Level, Spawn.SpawnTime, Spawn.Radius, Spawn.Count, Spawn.Route or 0, Spawn.When or 0})
 	end
 
 	local function SendWorldProp(intKey)
@@ -37,22 +38,24 @@ if SERVER then
 		Spawn.NextSpawns = {}
 	end
 
-	function GM:CreateSpawnPoint(vecPosition, angAngle, strNPC, intLevel, intSpawnTime, intRadius, intCount)
+	function GM:CreateSpawnPoint(vecPosition, angAngle, strNPC, intLevel, intSpawnTime, intRadius, intCount, intRoute, intWhen)
 		table.insert(GAMEMODE.MapEntities.NPCSpawnPoints, {Monsters = {}, NextSpawns = {}})
-		GAMEMODE:UpdateSpawnPoint(#GAMEMODE.MapEntities.NPCSpawnPoints, vecPosition, angAngle, strNPC, intLevel, intSpawnTime, intRadius, intCount)
+		GAMEMODE:UpdateSpawnPoint(#GAMEMODE.MapEntities.NPCSpawnPoints, vecPosition, angAngle, strNPC, intLevel, intSpawnTime, intRadius, intCount, intRoute, intWhen)
 	end
 
-	function GM:UpdateSpawnPoint(intKey, vecPosition, angAngle, strNPC, intLevel, intSpawnTime, intRadius, intCount)
+	function GM:UpdateSpawnPoint(intKey, vecPosition, angAngle, strNPC, intLevel, intSpawnTime, intRadius, intCount, intRoute, intWhen)
 		local Spawn = GAMEMODE.MapEntities.NPCSpawnPoints[intKey]
 		if not Spawn then return end
 		local OldNPC, OldPosition, OldLevel, OldRadius, OldCount = Spawn.NPC, Spawn.Position, Spawn.Level, Spawn.Radius, Spawn.Count
 		Spawn.Position = vecPosition or Spawn.Position
 		Spawn.Angle = angAngle or Spawn.Angle or Angle(0, 0, 0)
-		Spawn.NPC = strNPC or Spawn.NPC or "zombie"
+		Spawn.NPC = strNPC or Spawn.NPC or "morvaine_recruit"
 		Spawn.Level = intLevel or Spawn.Level or 5
 		Spawn.SpawnTime = intSpawnTime or Spawn.SpawnTime or 30
 		Spawn.Radius = intRadius or Spawn.Radius or 0
 		Spawn.Count = intCount or Spawn.Count or 1
+		Spawn.Route = intRoute or Spawn.Route or 0
+		Spawn.When = intWhen or Spawn.When or 0
 		Spawn.Monsters = Spawn.Monsters or {}
 		Spawn.NextSpawns = Spawn.NextSpawns or {}
 		local Changed = Spawn.NPC ~= OldNPC or Spawn.Position ~= OldPosition or Spawn.Level ~= OldLevel or Spawn.Radius ~= OldRadius or Spawn.Count ~= OldCount
@@ -60,7 +63,11 @@ if SERVER then
 			GAMEMODE:RemoveSpawnedMonsters(Spawn)
 		else
 			for _, Monster in pairs(Spawn.Monsters) do
-				if IsValid(Monster) then Monster:SetAngles(Spawn.Angle) end
+				if IsValid(Monster) then
+					Monster:SetAngles(Spawn.Angle)
+					Monster.UD_Route = Spawn.Route
+					Monster.UD_SpawnWhen = Spawn.When
+				end
 			end
 		end
 		SendSpawnPoint(intKey)
@@ -136,6 +143,55 @@ if SERVER then
 		ReindexWorldProps()
 		local ply = EditorPlayer()
 		if ply then SendNetworkMessage("UD_RemoveWorldProp", ply, {intKey}) end
+	end
+
+	local function SendPatrolRoute(intKey)
+		local ply = EditorPlayer()
+		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
+		if not ply or not Route then return end
+		SendNetworkMessage("UD_UpdatePatrolRoute", ply, {intKey, {Name = Route.Name, Points = Route.Points, Roamer = Route.Roamer, Level = Route.Level}})
+	end
+
+	function GM:CreatePatrolRoute(vecFirst, strName, tblPoints, boolRoamer, intLevel)
+		table.insert(GAMEMODE.MapEntities.PatrolRoutes, {Name = strName or "", Points = tblPoints or {vecFirst}, Roamer = boolRoamer and true or false, Level = intLevel or 30})
+		SendPatrolRoute(#GAMEMODE.MapEntities.PatrolRoutes)
+	end
+
+	function GM:UpdatePatrolRoute(intKey, strName, boolRoamer, intLevel)
+		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
+		if not Route then return end
+		if strName then Route.Name = string.sub(strName, 1, 60) end
+		if boolRoamer ~= nil then Route.Roamer = boolRoamer end
+		Route.Level = intLevel or Route.Level
+		SendPatrolRoute(intKey)
+	end
+
+	function GM:AddPatrolPoint(intKey, vecPosition)
+		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
+		if not Route or #Route.Points >= 40 then return end
+		table.insert(Route.Points, vecPosition)
+		SendPatrolRoute(intKey)
+	end
+
+	function GM:RemoveLastPatrolPoint(intKey)
+		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
+		if not Route or #Route.Points <= 1 then return end
+		table.remove(Route.Points)
+		SendPatrolRoute(intKey)
+	end
+
+	function GM:RemovePatrolRoute(intKey)
+		if not GAMEMODE.MapEntities.PatrolRoutes[intKey] then return end
+		table.remove(GAMEMODE.MapEntities.PatrolRoutes, intKey)
+		for intSpawn, Spawn in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
+			if (Spawn.Route or 0) == intKey then
+				GAMEMODE:UpdateSpawnPoint(intSpawn, nil, nil, nil, nil, nil, nil, nil, 0)
+			elseif (Spawn.Route or 0) > intKey then
+				GAMEMODE:UpdateSpawnPoint(intSpawn, nil, nil, nil, nil, nil, nil, nil, Spawn.Route - 1)
+			end
+		end
+		local ply = EditorPlayer()
+		if ply then SendNetworkMessage("UD_RemovePatrolRoute", ply, {intKey}) end
 	end
 
 	local function SendPlayerSpawn(intKey)
@@ -268,7 +324,7 @@ if SERVER then
 			return
 		end
 		for _, SpawnPoint in ipairs(tblDecodedTable.NPCSpawnPoints or {}) do
-			GAMEMODE:CreateSpawnPoint(SpawnPoint.Position, SpawnPoint.Angle or Angle(0, 90, 0), SpawnPoint.NPC, SpawnPoint.Level, SpawnPoint.SpawnTime, SpawnPoint.Radius, SpawnPoint.Count)
+			GAMEMODE:CreateSpawnPoint(SpawnPoint.Position, SpawnPoint.Angle or Angle(0, 90, 0), SpawnPoint.NPC, SpawnPoint.Level, SpawnPoint.SpawnTime, SpawnPoint.Radius, SpawnPoint.Count, SpawnPoint.Route, SpawnPoint.When)
 		end
 		for k, WorldProp in ipairs(tblDecodedTable.WorldProps or {}) do
 			timer.Simple(0.05 * k, function() GAMEMODE:CreateWorldProp(WorldProp.Model, WorldProp.Position, WorldProp.Angle, nil, true) end)
@@ -279,12 +335,20 @@ if SERVER then
 		for _, Vein in ipairs(tblDecodedTable.OreVeins or {}) do
 			GAMEMODE:CreateOreVein(Vein.Position, Vein.Angle, Vein.Ore, Vein.SpawnTime, Vein.Model, true)
 		end
+		for _, Route in ipairs(tblDecodedTable.PatrolRoutes or {}) do
+			if istable(Route.Points) and #Route.Points > 0 then
+				GAMEMODE:CreatePatrolRoute(nil, Route.Name, Route.Points, Route.Roamer, Route.Level)
+			end
+		end
 	end
 	hook.Add("Initialize", "LoadMapObjects", function() GAMEMODE:LoadMapObjects() end)
 
 	function GM:SaveMapObjects()
 		local strFileName = GAMEMODE.DataFolder .. "/Maps/" .. game.GetMap() .. ".txt"
-		local tblSaveTable = {NPCSpawnPoints = {}, WorldProps = {}, PlayerSpawns = {}, OreVeins = {}}
+		local tblSaveTable = {NPCSpawnPoints = {}, WorldProps = {}, PlayerSpawns = {}, OreVeins = {}, PatrolRoutes = {}}
+		for _, Route in ipairs(GAMEMODE.MapEntities.PatrolRoutes) do
+			table.insert(tblSaveTable.PatrolRoutes, {Name = Route.Name, Points = Route.Points, Roamer = Route.Roamer, Level = Route.Level})
+		end
 		for _, Vein in ipairs(GAMEMODE.MapEntities.OreVeins) do
 			table.insert(tblSaveTable.OreVeins, {Position = Vein.Position, Angle = Vein.Angle, Ore = Vein.Ore, SpawnTime = Vein.SpawnTime, Model = Vein.Model})
 		end
@@ -292,7 +356,7 @@ if SERVER then
 			table.insert(tblSaveTable.PlayerSpawns, {Position = Spawn.Position, Angle = Spawn.Angle})
 		end
 		for _, Spawn in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
-			table.insert(tblSaveTable.NPCSpawnPoints, {Position = Spawn.Position, Angle = Spawn.Angle, NPC = Spawn.NPC, Level = Spawn.Level, SpawnTime = Spawn.SpawnTime, Radius = Spawn.Radius, Count = Spawn.Count})
+			table.insert(tblSaveTable.NPCSpawnPoints, {Position = Spawn.Position, Angle = Spawn.Angle, NPC = Spawn.NPC, Level = Spawn.Level, SpawnTime = Spawn.SpawnTime, Radius = Spawn.Radius, Count = Spawn.Count, Route = Spawn.Route, When = Spawn.When})
 		end
 		for _, Prop in ipairs(GAMEMODE.MapEntities.WorldProps) do
 			table.insert(tblSaveTable.WorldProps, {Model = Prop.Model, Position = Prop.Position, Angle = Prop.Angle})
@@ -319,6 +383,7 @@ if SERVER then
 		local NPCCount = #ents.FindByClass("npc_*")
 		for _, Spawn in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
 			if (Spawn.SpawnTime or 0) <= 0 then continue end
+			if not GAMEMODE:SpawnTimeAllows(Spawn.When) then continue end
 			for Slot = 1, Spawn.Count or 1 do
 				if NPCCount >= MaxNPCs then return end
 				local Monster = Spawn.Monsters[Slot]
@@ -328,6 +393,10 @@ if SERVER then
 					end
 					if CurTime() >= Spawn.NextSpawns[Slot] then
 						local NewMonster = GAMEMODE:CreateNPC(Spawn.NPC, {Position = FindSpawnPosition(Spawn), Angle = Spawn.Angle, Level = Spawn.Level})
+						if IsValid(NewMonster) then
+							NewMonster.UD_Route = Spawn.Route
+							NewMonster.UD_SpawnWhen = Spawn.When
+						end
 						Spawn.Monsters[Slot] = IsValid(NewMonster) and NewMonster or NULL
 						Spawn.NextSpawns[Slot] = nil
 						if IsValid(NewMonster) then NPCCount = NPCCount + 1 end
@@ -370,6 +439,8 @@ if SERVER then
 		entNewMonster:Spawn()
 		GAMEMODE:ApplyNPCSkin(entNewMonster, tblNPCTable)
 		GAMEMODE:ApplyNPCHeldItems(entNewMonster, tblNPCTable)
+		GAMEMODE:ApplyNPCUndead(entNewMonster, tblNPCTable)
+		GAMEMODE:ApplyNPCBoss(entNewMonster, tblNPCTable)
 		if tblNPCTable.DeathDistance then
 			for _, ent in pairs(ents.FindInSphere( tblSpawnPoint.Position, tblNPCTable.DeathDistance )) do
 				if IsValid(ent) and ent:IsPlayer() then
@@ -433,9 +504,6 @@ if SERVER then
 		else
 			if not ent.Invincible then entNPC:AddEntityRelationship(ent, GAMEMODE.RelationHate, 99) end
 			if not entNPC.Invincible and ent:IsNPC() then ent:AddEntityRelationship(entNPC, GAMEMODE.RelationHate, 99) end
-			if ent:IsPlayer() and not GAMEMODE.EventHasStarted and entNPC:GetNWInt("level") < ent:GetLevel() then
-				entNPC:AddEntityRelationship(ent, GAMEMODE.RelationNeutral, 99)
-			end
 		end
 	end
 
@@ -451,6 +519,7 @@ if SERVER then
 			for intKey in ipairs(GAMEMODE.MapEntities.WorldProps) do SendWorldProp(intKey) end
 			for intKey in ipairs(GAMEMODE.MapEntities.PlayerSpawns) do SendPlayerSpawn(intKey) end
 			for intKey in ipairs(GAMEMODE.MapEntities.OreVeins) do SendOreVein(intKey) end
+			for intKey in ipairs(GAMEMODE.MapEntities.PatrolRoutes) do SendPatrolRoute(intKey) end
 		end)
 
 		local function IsEditor(ply)
@@ -478,14 +547,14 @@ if SERVER then
 			if not IsEditor(ply) then return end
 			local Position = VectorFromArgs(args, 1)
 			if not Position or not NPCTable(args[5]) then return end
-			GAMEMODE:CreateSpawnPoint(Position, YawAngle(args[4]), args[5], ClampArg(args[6], 1, 100, 5), ClampArg(args[7], 1, 3600, 30), ClampArg(args[8], 0, 2000, 0), ClampArg(args[9], 1, 20, 1))
+			GAMEMODE:CreateSpawnPoint(Position, YawAngle(args[4]), args[5], ClampArg(args[6], 1, 150, 5), ClampArg(args[7], 1, 3600, 30), ClampArg(args[8], 0, 2000, 0), ClampArg(args[9], 1, 20, 1), ClampArg(args[10], 0, 99, 0), ClampArg(args[11], 0, 2, 0))
 		end)
 
 		concommand.Add("UD_Dev_EditMap_UpdateSpawnPoint", function(ply, command, args)
 			if not IsEditor(ply) then return end
 			local intKey = tonumber(args[1])
 			if not intKey or not GAMEMODE.MapEntities.NPCSpawnPoints[intKey] or not NPCTable(args[2]) then return end
-			GAMEMODE:UpdateSpawnPoint(intKey, nil, YawAngle(args[5]), args[2], ClampArg(args[3], 1, 100, 5), ClampArg(args[4], 1, 3600, 30), ClampArg(args[6], 0, 2000, 0), ClampArg(args[7], 1, 20, 1))
+			GAMEMODE:UpdateSpawnPoint(intKey, nil, YawAngle(args[5]), args[2], ClampArg(args[3], 1, 150, 5), ClampArg(args[4], 1, 3600, 30), ClampArg(args[6], 0, 2000, 0), ClampArg(args[7], 1, 20, 1), ClampArg(args[8], 0, 99, 0), ClampArg(args[9], 0, 2, 0))
 		end)
 
 		concommand.Add("UD_Dev_EditMap_MoveSpawnPoint", function(ply, command, args)
@@ -577,6 +646,35 @@ if SERVER then
 			GAMEMODE:RemoveOreVein(tonumber(args[1]))
 		end)
 
+		concommand.Add("UD_Dev_EditMap_AddRoute", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			local Position = VectorFromArgs(args, 1)
+			if not Position then return end
+			GAMEMODE:CreatePatrolRoute(Position + Vector(0, 0, 8))
+		end)
+
+		concommand.Add("UD_Dev_EditMap_AddRoutePoint", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			local Position = VectorFromArgs(args, 2)
+			if not Position then return end
+			GAMEMODE:AddPatrolPoint(tonumber(args[1]), Position + Vector(0, 0, 8))
+		end)
+
+		concommand.Add("UD_Dev_EditMap_RemoveRoutePoint", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			GAMEMODE:RemoveLastPatrolPoint(tonumber(args[1]))
+		end)
+
+		concommand.Add("UD_Dev_EditMap_UpdateRoute", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			GAMEMODE:UpdatePatrolRoute(tonumber(args[1]), args[2] or "", args[3] == "1", ClampArg(args[4], 1, 150, 30))
+		end)
+
+		concommand.Add("UD_Dev_EditMap_RemoveRoute", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			GAMEMODE:RemovePatrolRoute(tonumber(args[1]))
+		end)
+
 		concommand.Add("UD_Dev_EditMap_SaveMap", function(ply, command, args)
 			if not IsEditor(ply) then return end
 			GAMEMODE:SaveMapObjects()
@@ -594,7 +692,9 @@ if CLIENT then
 		local SpawnTime = net.ReadDouble()
 		local Radius = net.ReadDouble()
 		local Count = net.ReadDouble()
-		GAMEMODE.MapEntities.NPCSpawnPoints[intKey] = {Position = Position, Angle = Ang, NPC = NPC, Level = Level, SpawnTime = SpawnTime, Radius = Radius, Count = Count}
+		local Route = net.ReadDouble()
+		local When = net.ReadDouble()
+		GAMEMODE.MapEntities.NPCSpawnPoints[intKey] = {Position = Position, Angle = Ang, NPC = NPC, Level = Level, SpawnTime = SpawnTime, Radius = Radius, Count = Count, Route = Route, When = When}
 		hook.Run("UD_MapObjectsChanged")
 	end)
 
@@ -644,6 +744,19 @@ if CLIENT then
 
 	net.Receive("UD_RemoveOreVein", function()
 		table.remove(GAMEMODE.MapEntities.OreVeins, net.ReadDouble())
+		hook.Run("UD_MapObjectsChanged")
+	end)
+
+	net.Receive("UD_UpdatePatrolRoute", function()
+		local intKey = net.ReadDouble()
+		local Route = util.JSONToTable(net.ReadString() or "") or {}
+		Route.Points = Route.Points or {}
+		GAMEMODE.MapEntities.PatrolRoutes[intKey] = Route
+		hook.Run("UD_MapObjectsChanged")
+	end)
+
+	net.Receive("UD_RemovePatrolRoute", function()
+		table.remove(GAMEMODE.MapEntities.PatrolRoutes, net.ReadDouble())
 		hook.Run("UD_MapObjectsChanged")
 	end)
 end

@@ -16,6 +16,8 @@ GM.Combat = {
 	LevelDifferenceMin = 0.25,
 	LevelDifferenceMax = 1.5,
 	AgilityMoveSpeed = 4,
+	BootSpeedBase = 6,
+	BootSpeedPerLevel = 0.25,
 	AgilityFireRateDivisor = 40,
 	WeaponTierHalfGap = 5,
 	ArmorTierHalfGap = 6,
@@ -56,6 +58,7 @@ GM.SlotUnlockLevel = {
 	slot_primaryweapon = 1,
 	slot_chest = 1,
 	slot_offhand = 1,
+	slot_boots = 5,
 	slot_waist = 10,
 	slot_helm = 15,
 	slot_shoulder = 20,
@@ -70,6 +73,7 @@ GM.ArmorSlotShare = {
 	slot_helm = 1,
 	slot_shoulder = 1,
 	slot_waist = 1,
+	slot_boots = 0.3,
 }
 
 GM.LevelGrowth = {
@@ -181,6 +185,50 @@ end
 
 function GM:GetArmorPrice(strSlot, intLevel)
 	return self:GetGearPrice(intLevel, self.Combat.ArmorPriceFactor * (self.ArmorSlotShare[strSlot] or 1))
+end
+
+GM.QuestRewards = {
+	starter = {Exp = 0.5, Money = 0.5},
+	main = {Exp = 0.9, Money = 0.6},
+	side = {Exp = 0.4, Money = 0.4},
+}
+
+GM.KillExp = {
+	Scale = 1 / 12,
+	MinRatio = 0.25,
+	MaxRatio = 1.5,
+}
+
+function GM:GetKillExp(entNPC, flPlayerLevel)
+	local KillExp = self.KillExp
+	local flRatio = math.Clamp(entNPC:GetLevel() / math.max(flPlayerLevel or 1, 1), KillExp.MinRatio, KillExp.MaxRatio)
+	return entNPC:GetMaxHealth() * flRatio * KillExp.Scale
+end
+
+function GM:GetQuestExp(intLevel, strKind)
+	local tblKind = self.QuestRewards[strKind or "side"] or self.QuestRewards.side
+	return math.max(math.Round(ExpToNextLevel(intLevel) * tblKind.Exp), 10)
+end
+
+function GM:GetQuestMoney(intLevel, strKind)
+	local tblKind = self.QuestRewards[strKind or "side"] or self.QuestRewards.side
+	return math.max(math.Round(self:GetGearPrice(intLevel) * tblKind.Money), 10)
+end
+
+function GM:GetQuestGear(strKind, intLevel)
+	local strBest, intBest, strLowest, intLowest
+	for strName, tblItem in pairs(self.DataBase.Items) do
+		if tblItem.Crafted and not tblItem.Generated and (tblItem.WeaponClass == strKind or (not tblItem.WeaponClass and tblItem.Slot == strKind)) then
+			local intItemLevel = tblItem.Level or 1
+			if intItemLevel <= intLevel and (not intBest or intItemLevel > intBest or (intItemLevel == intBest and strName < strBest)) then
+				strBest, intBest = strName, intItemLevel
+			end
+			if not intLowest or intItemLevel < intLowest or (intItemLevel == intLowest and strName < strLowest) then
+				strLowest, intLowest = strName, intItemLevel
+			end
+		end
+	end
+	return strBest or strLowest
 end
 
 function GM:GetTradeTier(intLevel)

@@ -223,10 +223,11 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 	if ItemTable.ClipSize and ItemTable.ClipSize >= 0 then Tooltip = Format("%s\nClipsize: %s", Tooltip, ItemTable.ClipSize) end
 	if ItemTable.Slot and ItemTable.Slot ~= "slot_primaryweapon" then Tooltip = Format("%s\nSlot: %s", Tooltip, SlotTable(ItemTable.Slot).PrintName) end
 	if ItemTable.Armor then Tooltip = Format("%s\nArmor: %s", Tooltip, ItemTable.Armor) end
-	for Stat, Amount in pairs(ItemTable.Buffs or {}) do
+	for Stat, Amount in pairs(ItemTable.SocketBaseBuffs or ItemTable.Buffs or {}) do
 		local StatTable = StatTable(Stat)
 		Tooltip = Format("%s\n+%s %s", Tooltip, Amount, StatTable.PrintName)
 	end
+	if GAMEMODE.AddSocketTooltip then Tooltip = GAMEMODE:AddSocketTooltip(Tooltip, ItemTable) end
 	if ItemTable.PowerDesc then Tooltip = Format("%s\n%s", Tooltip, ItemTable.PowerDesc) end
 	if ItemTable.Lore then Tooltip = Format("%s\n\n\"%s\"", Tooltip, ItemTable.Lore) end
 	local SetTable = EquipmentSetTable(ItemTable.Set) or {}
@@ -260,6 +261,7 @@ function PANEL:SetItem(ItemTable, Amount, UseCommand, Cost)
 		if UseCommand == "sell" and Cost > 0 and Amount > 1 then GAMEMODE.ActiveMenu:AddOption("Sell All", function() self.DoUseItem(Amount) end) end
 		if UseCommand == "deposit" and self.DoUseItem then GAMEMODE.ActiveMenu:AddOption("Deposit", function() self.DoUseItem() end) end
 		if UseCommand == "withdraw" and self.DoUseItem then GAMEMODE.ActiveMenu:AddOption("Withdraw", function() self.DoUseItem() end) end
+		if UseCommand == "use" and GAMEMODE.AddSocketMenu then GAMEMODE:AddSocketMenu(GAMEMODE.ActiveMenu, ItemTable) end
 		if UseCommand == "use" and ItemTable.Dropable then GAMEMODE.ActiveMenu:AddOption("Drop", function() self.DoDropItem() end) end
 		if UseCommand == "use" and ItemTable.Giveable and player.GetCount() > 1 then
 			local GiveSubMenu = nil

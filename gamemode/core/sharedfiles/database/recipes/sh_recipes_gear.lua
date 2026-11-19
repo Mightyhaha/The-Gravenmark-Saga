@@ -9,6 +9,7 @@ local Shares = {
 	slot_shoulder = {metal = 0.7, leather = 0.3},
 	slot_chest = {metal = 0.75, cloth = 0.25},
 	slot_waist = {metal = 0.2, leather = 0.8},
+	slot_boots = {leather = 0.65, metal = 0.35},
 	slot_offhand = {metal = 0.7, leather = 0.3},
 	slot_neck = {metal = 0.75, leather = 0.25},
 	slot_ring_1 = {metal = 1},

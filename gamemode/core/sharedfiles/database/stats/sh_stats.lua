@@ -75,6 +75,18 @@ end
 Register.Stat(Stat)
 
 local Stat = {}
+Stat.Name = "stat_movespeed"
+Stat.PrintName = "Move Speed"
+Stat.Desc = "Added straight to how fast you walk and run."
+Stat.Default = 0
+Stat.Hide = true
+function Stat:OnSet(ply, intSpeed)
+	ply:AddMoveSpeed(intSpeed - (ply.UD_MoveSpeedBonus or 0))
+	ply.UD_MoveSpeedBonus = intSpeed
+end
+Register.Stat(Stat)
+
+local Stat = {}
 Stat.Name = "stat_luck"
 Stat.PrintName = "Luck"
 Stat.Desc = "You find yourself to be more lucky. Increased chance of critical hits."

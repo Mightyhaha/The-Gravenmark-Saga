@@ -67,6 +67,8 @@ if SERVER then
 		{ID = "1941832894", Name = "The Mercenaries (PM, Ragdoll & NPC)"},
 		{ID = "2210971880", Name = "TES Morrowind swords"},
 		{ID = "385795223", Name = "Medieval NPC Melee Weapons"},
+		{ID = "2905070104", Name = "zombie!! playermodels"},
+		{ID = "903784487", Name = "Arantir"},
 		{ID = "104782818", Name = "Rebellland Beta02b for Underdone", Map = "ud_rebellland_beta_02b"},
 	}
 	for _, Addon in ipairs(GM.RequiredWorkshop) do

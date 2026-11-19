@@ -86,8 +86,9 @@ function GM:OnNPCKilled(Target, Killer, weapon)
 	end
 	if Target:GetNWInt("level") > 0 and Killer and Killer:IsValid() and Killer:IsPlayer() then
 		local NPCTable = NPCTable(Target:GetNWString("npc"))
+		local flExpShare = Target.UD_Summoned and GAMEMODE.SummonExpShare or 1
 		if #(Killer.Squad or {}) > 1 then
-			local TotalExp = math.Round((Target:GetMaxHealth() * (Target:GetLevel() / Killer:GetAverageSquadLevel())) / (#(Killer.Squad or {}) + 7))
+			local TotalExp = math.Round(GAMEMODE:GetKillExp(Target, Killer:GetAverageSquadLevel()) * flExpShare * 6 / (#(Killer.Squad or {}) + 7))
 			local PerPlayer = math.Round(TotalExp / #Killer.Squad)
 			for _, ply in pairs(Killer.Squad) do
 				if IsValid(ply) then
@@ -95,8 +96,9 @@ function GM:OnNPCKilled(Target, Killer, weapon)
 				end
 			end
 		else
-			Killer:GiveExp(math.Round((Target:GetMaxHealth() * (Target:GetLevel() / Killer:GetLevel())) / 6), true)
+			Killer:GiveExp(math.max(math.Round(GAMEMODE:GetKillExp(Target, Killer:GetLevel()) * flExpShare), 1), true)
 		end
+		if Target.UD_Summoned then return end
 		for Item, Info in pairs(NPCTable.Drops or {}) do
 			local ItemTable = ItemTable(Item)
 			--Check Level of player and of npc
@@ -155,7 +157,7 @@ local function NPCAdjustDamage(Victim, DamageInfo)
 			Attacker:AddQuestKill(Victim:GetNWString("npc"))
 		end
 		DamageInfo:SetDamage(math.Round(DamageInfo:GetDamage() + math.random(-1, math.Round(1 * (1 + (Attacker:GetStat("stat_luck") / 55))))))
-		DamageInfo:SetDamage(math.max(DamageInfo:GetDamage(), 0))
+		DamageInfo:SetDamage(math.max(math.Round(DamageInfo:GetDamage() * GAMEMODE:GetNPCDamageTakenMod(Victim)), 0))
 		Attacker:CallSkillHook("on_hit", Victim, DamageInfo:GetDamage())
 		if not Attacker.EntityDamageData then
 			Attacker.EntityDamageData = {}

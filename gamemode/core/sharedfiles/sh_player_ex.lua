@@ -268,7 +268,7 @@ if SERVER then
 					tblNPCTable:DamageCallBack(entAttacker, entVictim)
 				end
 			end
-			local Damage = GAMEMODE:GetNPCHitDamage(tblNPCTable, entAttacker:GetNWInt("level"), entVictim) * math.Rand(0.9, 1.1)
+			local Damage = GAMEMODE:GetNPCHitDamage(tblNPCTable, entAttacker:GetNWInt("level"), entVictim) * math.Rand(0.9, 1.1) * GAMEMODE:GetNPCDamageMod(entAttacker, tblNPCTable)
 			if tblNPCTable.Race == "human" then Damage = 0 end
 			entVictim.UD_BlockedHit = nil
 			if Damage > 0 then

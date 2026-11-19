@@ -69,7 +69,10 @@ local ColorPending = Color(80, 255, 80, 255)
 local ColorMoving = Color(80, 200, 255, 255)
 local ColorPlayerSpawn = Color(120, 170, 255, 220)
 local ColorOutline = Color(0, 0, 0, 255)
-local ModeNouns = {npc = "spawn point", prop = "prop", player = "player spawn", ore = "ore vein"}
+local ColorRoute = Color(255, 140, 60, 230)
+local ColorRoamer = Color(190, 120, 255, 230)
+local ModeNouns = {npc = "spawn point", prop = "prop", player = "player spawn", ore = "ore vein", route = "patrol route"}
+local WhenNames = {[0] = "Always", [1] = "Only at night", [2] = "Only by day"}
 
 Editor.Mode = "npc"
 Editor.Pending = nil
@@ -77,7 +80,7 @@ Editor.SelectedKey = nil
 Editor.Edit = nil
 Editor.Moving = false
 Editor.Dirty = false
-Editor.Settings = {NPC = nil, Level = 5, SpawnTime = 30, Radius = 0, Count = 1, Yaw = 0, Model = Editor.Models[1], Ore = "bogiron", OreRespawn = 180, OreModel = nil}
+Editor.Settings = {NPC = nil, Level = 5, SpawnTime = 30, Radius = 0, Count = 1, Yaw = 0, Model = Editor.Models[1], Ore = "bogiron", OreRespawn = 180, OreModel = nil, Route = 0, When = 0, RouteName = "", Roamer = false, RouteLevel = 30}
 
 local Rebuild
 
@@ -85,6 +88,7 @@ local function ObjectList()
 	if Editor.Mode == "npc" then return GAMEMODE.MapEntities.NPCSpawnPoints end
 	if Editor.Mode == "player" then return GAMEMODE.MapEntities.PlayerSpawns end
 	if Editor.Mode == "ore" then return GAMEMODE.MapEntities.OreVeins end
+	if Editor.Mode == "route" then return GAMEMODE.MapEntities.PatrolRoutes end
 	return GAMEMODE.MapEntities.WorldProps
 end
 
@@ -107,6 +111,8 @@ local function StatusText()
 	local Status
 	if Editor.Moving then
 		Status = "Click the spot to move the selected " .. Noun .. " to. Right-click cancels."
+	elseif Editor.SelectedKey and Editor.Mode == "route" then
+		Status = "Editing patrol route #" .. Editor.SelectedKey .. ". Left-click the ground to add the next point. Right-click to deselect."
 	elseif Editor.SelectedKey then
 		Status = "Editing " .. Noun .. " #" .. Editor.SelectedKey .. ". Right-click to deselect."
 	elseif Editor.Pending then
@@ -114,7 +120,7 @@ local function StatusText()
 	else
 		Status = "Left-click the ground to place a " .. Noun .. ", or click a marker to edit it."
 	end
-	local Counts = #GAMEMODE.MapEntities.NPCSpawnPoints .. " NPC spawns, " .. #GAMEMODE.MapEntities.WorldProps .. " props, " .. #GAMEMODE.MapEntities.PlayerSpawns .. " player spawns, " .. #GAMEMODE.MapEntities.OreVeins .. " ore veins"
+	local Counts = #GAMEMODE.MapEntities.NPCSpawnPoints .. " NPC spawns, " .. #GAMEMODE.MapEntities.WorldProps .. " props, " .. #GAMEMODE.MapEntities.PlayerSpawns .. " player spawns, " .. #GAMEMODE.MapEntities.OreVeins .. " ore veins, " .. #GAMEMODE.MapEntities.PatrolRoutes .. " routes"
 	if Editor.Dirty then Counts = Counts .. "  -  unsaved changes" end
 	local Mouse = Editor.CursorEnabled and "Mouse: ON (press C to look around)" or "Mouse: OFF (press C to use this window)"
 	return Status .. "\n" .. Counts .. "\n" .. Mouse
@@ -185,7 +191,9 @@ local function Select(Key)
 	Editor.SelectedKey = Key
 	local Yaw = Object.Angle and math.Round(math.NormalizeAngle(Object.Angle.y)) or 0
 	if Editor.Mode == "npc" then
-		Editor.Edit = {NPC = Object.NPC, Level = Object.Level or 5, SpawnTime = Object.SpawnTime or 30, Radius = Object.Radius or 0, Count = Object.Count or 1, Yaw = Yaw}
+		Editor.Edit = {NPC = Object.NPC, Level = Object.Level or 5, SpawnTime = Object.SpawnTime or 30, Radius = Object.Radius or 0, Count = Object.Count or 1, Yaw = Yaw, Route = Object.Route or 0, When = Object.When or 0}
+	elseif Editor.Mode == "route" then
+		Editor.Edit = {RouteName = Object.Name or "", Roamer = Object.Roamer or false, RouteLevel = Object.Level or 30}
 	elseif Editor.Mode == "player" then
 		Editor.Edit = {Yaw = Yaw}
 	elseif Editor.Mode == "ore" then
@@ -228,11 +236,17 @@ local function BuildSpawnControls(Body, Values)
 	AddSlider(Body, "How many NPCs", 1, 20, Values.Count, function(Value) Values.Count = Value end)
 	AddSlider(Body, "Spawn area radius", 0, 1000, Values.Radius, function(Value) Values.Radius = Value end)
 	AddSlider(Body, "Facing", -180, 180, Values.Yaw, function(Value) Values.Yaw = Value end)
+	AddSlider(Body, "Patrol route # (0 = stay put)", 0, math.max(#GAMEMODE.MapEntities.PatrolRoutes, 1), Values.Route or 0, function(Value) Values.Route = Value end)
+	local WhenBox = vgui.Create("DComboBox", Body)
+	WhenBox:Dock(TOP)
+	WhenBox:DockMargin(0, 0, 0, 4)
+	for intWhen = 0, 2 do WhenBox:AddChoice("Spawns: " .. WhenNames[intWhen], intWhen, (Values.When or 0) == intWhen) end
+	WhenBox.OnSelect = function(_, _, _, Data) Values.When = Data end
 
 	if Editor.SelectedKey then
 		local Key = Editor.SelectedKey
 		AddButton(Body, "Apply changes", function()
-			SendCommand("UD_Dev_EditMap_UpdateSpawnPoint", Key, Values.NPC, Values.Level, Values.SpawnTime, Values.Yaw, Values.Radius, Values.Count)
+			SendCommand("UD_Dev_EditMap_UpdateSpawnPoint", Key, Values.NPC, Values.Level, Values.SpawnTime, Values.Yaw, Values.Radius, Values.Count, Values.Route or 0, Values.When or 0)
 			UpdateStatus()
 		end)
 		AddButton(Body, "Move to a new spot", function()
@@ -248,7 +262,7 @@ local function BuildSpawnControls(Body, Values)
 		AddSpawnButton = AddButton(Body, "Add spawn point", function()
 			if not Values.NPC or not Editor.Pending then return end
 			local x, y, z = PositionArgs(Editor.Pending.Position)
-			SendCommand("UD_Dev_EditMap_AddSpawnPoint", x, y, z, Values.Yaw, Values.NPC, Values.Level, Values.SpawnTime, Values.Radius, Values.Count)
+			SendCommand("UD_Dev_EditMap_AddSpawnPoint", x, y, z, Values.Yaw, Values.NPC, Values.Level, Values.SpawnTime, Values.Radius, Values.Count, Values.Route or 0, Values.When or 0)
 			Editor.Pending = nil
 			Rebuild()
 		end)
@@ -416,6 +430,49 @@ local function BuildOreControls(Body, Values)
 	end
 end
 
+local function BuildRouteControls(Body, Values)
+	if not Editor.SelectedKey then
+		AddLabel(Body, "A patrol route is a line of points NPCs walk in a loop. Start one here, then keep clicking the ground to add points. Give an NPC spawn point the route's number to make its NPCs patrol it.")
+		AddButton(Body, "Start a new route here", function()
+			if not Editor.Pending then return end
+			local x, y, z = PositionArgs(Editor.Pending.Position)
+			SendCommand("UD_Dev_EditMap_AddRoute", x, y, z)
+			Editor.Pending = nil
+			Editor.AwaitRoute = #GAMEMODE.MapEntities.PatrolRoutes + 1
+			Rebuild()
+		end)
+		AddButton(Body, "Cancel", Cancel)
+		return
+	end
+	local Key = Editor.SelectedKey
+	local Route = GAMEMODE.MapEntities.PatrolRoutes[Key]
+	AddLabel(Body, "Route #" .. Key .. ", " .. (Route and #Route.Points or 0) .. " points. Click the ground to add the next point.")
+	local NameEntry = vgui.Create("DTextEntry", Body)
+	NameEntry:Dock(TOP)
+	NameEntry:DockMargin(0, 0, 0, 4)
+	NameEntry:SetPlaceholderText("Place name, used when a night monster is announced")
+	NameEntry:SetValue(Values.RouteName or "")
+	NameEntry.OnChange = function(self) Values.RouteName = self:GetValue() end
+	local RoamerBox = vgui.Create("DCheckBoxLabel", Body)
+	RoamerBox:Dock(TOP)
+	RoamerBox:DockMargin(0, 0, 0, 4)
+	RoamerBox:SetDark(true)
+	RoamerBox:SetText("A night monster may roam this route")
+	RoamerBox:SetValue(Values.Roamer and 1 or 0)
+	RoamerBox.OnChange = function(_, Checked) Values.Roamer = Checked end
+	AddSlider(Body, "Night monster level", 1, 150, Values.RouteLevel, function(Value) Values.RouteLevel = Value end)
+	AddButton(Body, "Apply changes", function()
+		SendCommand("UD_Dev_EditMap_UpdateRoute", Key, Values.RouteName or "", Values.Roamer and "1" or "0", Values.RouteLevel or 30)
+		UpdateStatus()
+	end)
+	AddButton(Body, "Remove last point", function() SendCommand("UD_Dev_EditMap_RemoveRoutePoint", Key) end)
+	AddButton(Body, "Remove route", function()
+		SendCommand("UD_Dev_EditMap_RemoveRoute", Key)
+		Deselect()
+	end)
+	AddButton(Body, "Deselect", Deselect)
+end
+
 Rebuild = function()
 	if not IsValid(Editor.Frame) then return end
 	UpdateStatus()
@@ -431,6 +488,8 @@ Rebuild = function()
 		BuildPlayerSpawnControls(Body, CurrentValues())
 	elseif Editor.Mode == "ore" then
 		BuildOreControls(Body, CurrentValues())
+	elseif Editor.Mode == "route" then
+		BuildRouteControls(Body, CurrentValues())
 	else
 		BuildPropControls(Body, CurrentValues())
 	end
@@ -467,8 +526,33 @@ local function FindWorldPropAt(Trace)
 	return BestKey
 end
 
+local function FindRouteAt(Position)
+	local BestKey, BestDistance = nil, SelectReach
+	for Key, Route in ipairs(GAMEMODE.MapEntities.PatrolRoutes) do
+		for _, Point in ipairs(Route.Points or {}) do
+			local Distance = FlatDistance(Position, Point)
+			if Distance < BestDistance and math.abs(Position.z - Point.z) < 96 then
+				BestKey, BestDistance = Key, Distance
+			end
+		end
+	end
+	return BestKey
+end
+
 local function HandleWorldClick(Trace)
 	if not Trace or not Trace.Hit then return end
+	if Editor.Mode == "route" then
+		local Key = FindRouteAt(Trace.HitPos)
+		if Key and Key ~= Editor.SelectedKey then
+			Select(Key)
+		elseif Editor.SelectedKey then
+			local x, y, z = PositionArgs(Trace.HitPos)
+			SendCommand("UD_Dev_EditMap_AddRoutePoint", Editor.SelectedKey, x, y, z)
+		else
+			PlacePending(Trace.HitPos)
+		end
+		return
+	end
 	if Editor.Moving and Editor.SelectedKey then
 		local x, y, z = PositionArgs(Trace.HitPos)
 		local MoveCommands = {npc = "UD_Dev_EditMap_MoveSpawnPoint", prop = "UD_Dev_EditMap_MoveWorldProp", player = "UD_Dev_EditMap_MovePlayerSpawn", ore = "UD_Dev_EditMap_MoveOreVein"}
@@ -541,6 +625,7 @@ function Editor.Open()
 	ModeBox:AddChoice("Props", "prop", Editor.Mode == "prop")
 	ModeBox:AddChoice("Player spawns", "player", Editor.Mode == "player")
 	ModeBox:AddChoice("Ore veins", "ore", Editor.Mode == "ore")
+	ModeBox:AddChoice("Patrol routes", "route", Editor.Mode == "route")
 	ModeBox.OnSelect = function(_, _, _, Data)
 		Editor.Mode = Data
 		Editor.Pending = nil
@@ -585,6 +670,16 @@ end)
 
 hook.Add("UD_MapObjectsChanged", "UD_MapEditorSync", function()
 	if not IsValid(Editor.Frame) then return end
+	if Editor.AwaitRoute and Editor.Mode == "route" and GAMEMODE.MapEntities.PatrolRoutes[Editor.AwaitRoute] then
+		local intKey = Editor.AwaitRoute
+		Editor.AwaitRoute = nil
+		Select(intKey)
+		return
+	end
+	if Editor.Mode == "route" and Editor.SelectedKey and ObjectList()[Editor.SelectedKey] then
+		Rebuild()
+		return
+	end
 	if Editor.SelectedKey and not ObjectList()[Editor.SelectedKey] then
 		Deselect()
 	else
@@ -647,6 +742,15 @@ local function DrawFacing(Center, Yaw, Col)
 	render.DrawLine(Tip, Tip - Ang:Forward() * 8 - Ang:Right() * 6, Col, true)
 end
 
+local function DrawRoute(Route, Col, boolNumbers)
+	local Points = Route.Points or {}
+	for intIndex, Point in ipairs(Points) do
+		DrawCircle(Point + Vector(0, 0, 3), 10, Col)
+		local Next = Points[intIndex + 1] or (#Points > 2 and Points[1])
+		if Next then render.DrawLine(Point + Vector(0, 0, 6), Next + Vector(0, 0, 6), Col, true) end
+	end
+end
+
 local function DrawSpawnMarker(Position, Values, Col)
 	local Center = Position + Vector(0, 0, 3)
 	DrawCircle(Center, MarkerRadius, Col)
@@ -656,7 +760,15 @@ end
 
 hook.Add("PostDrawTranslucentRenderables", "UD_MapEditorMarkers", function(DrawingDepth, DrawingSkybox)
 	if DrawingDepth or DrawingSkybox or not IsValid(Editor.Frame) then return end
-	if Editor.Mode == "npc" then
+	if Editor.Mode == "route" or Editor.Mode == "npc" then
+		for Key, Route in ipairs(GAMEMODE.MapEntities.PatrolRoutes) do
+			local Col = (Editor.Mode == "route" and Key == Editor.SelectedKey) and ColorSelected or (Route.Roamer and ColorRoamer or ColorRoute)
+			DrawRoute(Route, Col)
+		end
+		if Editor.Mode == "route" and Editor.Pending then DrawCircle(Editor.Pending.Position + Vector(0, 0, 3), 10, ColorPending) end
+	end
+	if Editor.Mode == "route" then
+	elseif Editor.Mode == "npc" then
 		for Key, Spawn in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
 			if Key == Editor.SelectedKey then
 				DrawSpawnMarker(Spawn.Position, Editor.Edit, Editor.Moving and ColorMoving or ColorSelected)
@@ -709,10 +821,22 @@ hook.Add("HUDPaint", "UD_MapEditorLabels", function()
 		if not Screen.visible then return end
 		draw.SimpleTextOutlined(Text, "UiBold", Screen.x, Screen.y, Col, 1, 1, 1, ColorOutline)
 	end
-	if Editor.Mode == "npc" then
+	if Editor.Mode == "route" then
+		for Key, Route in ipairs(GAMEMODE.MapEntities.PatrolRoutes) do
+			local First = Route.Points and Route.Points[1]
+			if First then
+				local Text = "Route #" .. Key .. ((Route.Name or "") ~= "" and ("  " .. Route.Name) or "") .. "  (" .. #Route.Points .. " points)"
+				if Route.Roamer then Text = Text .. "  night monster Lv " .. (Route.Level or 30) end
+				DrawLabel(First, Text, Key == Editor.SelectedKey and ColorSelected or (Route.Roamer and ColorRoamer or ColorRoute))
+			end
+		end
+		if Editor.Pending then DrawLabel(Editor.Pending.Position, "New route", ColorPending) end
+	elseif Editor.Mode == "npc" then
 		for Key, Spawn in ipairs(GAMEMODE.MapEntities.NPCSpawnPoints) do
 			local NPC = NPCTable(Spawn.NPC)
 			local Text = "#" .. Key .. "  " .. (NPC and NPC.PrintName or Spawn.NPC) .. "  x" .. (Spawn.Count or 1) .. "  Lv " .. (Spawn.Level or 1)
+			if (Spawn.Route or 0) > 0 then Text = Text .. "  route " .. Spawn.Route end
+			if (Spawn.When or 0) > 0 then Text = Text .. "  (" .. WhenNames[Spawn.When] .. ")" end
 			if (Spawn.SpawnTime or 0) <= 0 then Text = Text .. "  (respawn 0: never spawns)" end
 			DrawLabel(Spawn.Position, Text, Key == Editor.SelectedKey and ColorSelected or White)
 		end

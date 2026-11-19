@@ -93,6 +93,7 @@ if SERVER then
 			self:CreateIndicator("+" .. intAmount .. "_" .. string.gsub(Ore.ItemName, " ", "_"), entVein:GetPos() + Vector(0, 0, 30), "green")
 			local intTier = math.max(self:GetMasterLevel("master_mining"), 1)
 			self:AddMaster("master_mining", math.max(math.Round((20 + 10 * Ore.MiningTier) * Ore.MiningTier / intTier), 1), true)
+			GAMEMODE:RollMiningGem(self, Ore, entVein:GetPos())
 			GAMEMODE:DepleteOreVein(entVein)
 		end)
 		return true

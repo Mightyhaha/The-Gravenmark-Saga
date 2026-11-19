@@ -106,12 +106,15 @@ function GM:GetNPCVoice(strNPC)
 	return self.Voices[tonumber(util.CRC(strNPC)) % #self.Voices + 1]
 end
 
-function GM:PlayNPCVoice(entNPC, strLine)
-	if CLIENT or not IsValid(entNPC) then return end
-	if (entNPC.UD_NextVoice or 0) > CurTime() then return end
+function GM:PlayNPCVoice(entNPC, strLine, ply, boolForce)
+	if CLIENT or not IsValid(entNPC) or not IsValid(ply) then return end
+	entNPC.UD_NextVoice = istable(entNPC.UD_NextVoice) and entNPC.UD_NextVoice or {}
+	if not boolForce and (entNPC.UD_NextVoice[ply] or 0) > CurTime() then return end
 	local strVoice = self:GetNPCVoice(entNPC:GetNWString("npc", ""))
 	local tblLines = strVoice and self.VoiceSounds[strVoice] and self.VoiceSounds[strVoice][strLine]
 	if not tblLines or #tblLines == 0 then return end
-	entNPC.UD_NextVoice = CurTime() + self.VoiceCooldown
-	entNPC:EmitSound(tblLines[math.random(#tblLines)], 72, 100, 1, CHAN_VOICE)
+	entNPC.UD_NextVoice[ply] = CurTime() + self.VoiceCooldown
+	local Filter = RecipientFilter()
+	Filter:AddPlayer(ply)
+	entNPC:EmitSound(tblLines[math.random(#tblLines)], 72, 100, 1, CHAN_VOICE, 0, 0, Filter)
 end

@@ -123,13 +123,30 @@ end
 
 local AutoSaveInterval = 30
 
+concommand.Add("UD_ResetCharacter", function(ply, command, args)
+	if not IsValid(ply) or not ply.Loaded then return end
+	if args[1] ~= "confirm" then
+		ply:ChatPrint("This wipes your level, items, bank, skills, quests and trades and starts a new character. A backup is kept in data/" .. GAMEMODE.DataFolder .. "/backups/. Type UD_ResetCharacter confirm to do it.")
+		return
+	end
+	ply:SaveGameNow("backups")
+	ply.UD_Wiped = true
+	file.Delete(ply:GetSaveFileName())
+	if game.SinglePlayer() then
+		RunConsoleCommand("changelevel", game.GetMap())
+	else
+		ply:Kick("Your character was reset. Rejoin to start again.")
+	end
+end)
+
 function Player:SaveGame()
-	if not self.Loaded or GAMEMODE.StopSaving or not self.Data then return end
+	if not self.Loaded or GAMEMODE.StopSaving or not self.Data or self.UD_Wiped then return end
 	self.UD_NeedsSave = true
 end
 
 function Player:SaveGameNow(SubFolder)
 	if not self.Loaded or GAMEMODE.StopSaving or not self.Data then return end
+	if self.UD_Wiped and not SubFolder then return end
 
 	local SaveTable = table.Copy(self.Data)
 	SaveTable.Inventory = {}

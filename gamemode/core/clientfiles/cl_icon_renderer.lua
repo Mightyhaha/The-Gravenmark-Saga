@@ -11,6 +11,7 @@ Renderer.SlotViews = {
 	slot_chest = Angle(4, 180, 0),
 	slot_shoulder = Angle(4, 180, 0),
 	slot_waist = Angle(35, 200, 0),
+	slot_boots = Angle(12, 215, 0),
 }
 Renderer.DefaultView = Angle(25, 215, 0)
 Renderer.Queue = {}

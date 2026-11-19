@@ -141,11 +141,13 @@ if CLIENT then
 		GAMEMODE.PaperDollEnts[self:SteamID64()] = GAMEMODE.PaperDollEnts[self:SteamID64()] or {}
 		local tblPlayerTable = GAMEMODE.PaperDollEnts[self:SteamID64()]
 		tblPlayerTable = tblPlayerTable or {}
-		local entPaperDollEnt = tblPlayerTable[strSlot]
-		if entPaperDollEnt and entPaperDollEnt:IsValid() then
-			for _, kid in pairs(entPaperDollEnt.Children or {}) do SafeRemoveEntity(kid) end
-			SafeRemoveEntity(entPaperDollEnt)
-			GAMEMODE.PaperDollEnts[self:SteamID64()][strSlot] = nil
+		for _, strKey in ipairs({strSlot, strSlot .. "#mirror"}) do
+			local entPaperDollEnt = tblPlayerTable[strKey]
+			if entPaperDollEnt and entPaperDollEnt:IsValid() then
+				for _, kid in pairs(entPaperDollEnt.Children or {}) do SafeRemoveEntity(kid) end
+				SafeRemoveEntity(entPaperDollEnt)
+			end
+			tblPlayerTable[strKey] = nil
 		end
 		if strItem and strSlot then
 			local tblItemTable = ItemTable(strItem)
@@ -160,9 +162,85 @@ if CLIENT then
 				end
 				entNewPart.Item = strItem
 				entNewPart.Attachment = tblSlotTable.Attachment
+				entNewPart.UD_RestAligned = tblSlotTable.RestAligned
 				GAMEMODE.PaperDollEnts[self:SteamID64()][strSlot] = entNewPart
 				GAMEMODE:AttachItemEffects(entNewPart)
+				if tblSlotTable.MirrorAttachment then
+					local entMirror = GAMEMODE:BuildModel(tblItemTable.Model)
+					if entMirror then
+						entMirror:SetParent(self)
+						entMirror.Item = strItem
+						entMirror.Attachment = tblSlotTable.MirrorAttachment
+						entMirror.UD_RestAligned = tblSlotTable.RestAligned
+						entMirror.UD_Mirror = true
+						GAMEMODE.PaperDollEnts[self:SteamID64()][strSlot .. "#mirror"] = entMirror
+						GAMEMODE:AttachItemEffects(entMirror)
+					end
+				end
 			end
+		end
+	end
+
+	local RestOffsets = {}
+	local RestRetry = {}
+
+	function GM:GetRestOffset(strModel, strBone)
+		local strKey = strModel .. "|" .. strBone
+		if RestOffsets[strKey] then return RestOffsets[strKey] end
+		if (RestRetry[strKey] or 0) > RealTime() then return end
+		RestRetry[strKey] = RealTime() + 2
+		local entRest = ClientsideModel(strModel, RENDERGROUP_OTHER)
+		if not IsValid(entRest) then return end
+		entRest:SetNoDraw(true)
+		entRest:SetPos(vector_origin)
+		entRest:SetAngles(angle_zero)
+		local intSequence = entRest:LookupSequence("idle_all_01")
+		if intSequence and intSequence > 0 then
+			entRest:ResetSequence(intSequence)
+			entRest:SetCycle(0)
+		end
+		entRest:SetupBones()
+		local intBone = entRest:LookupBone(strBone)
+		local matBone = intBone and entRest:GetBoneMatrix(intBone)
+		entRest:Remove()
+		if not matBone then return end
+		local _, angOffset = WorldToLocal(vector_origin, angle_zero, vector_origin, matBone:GetAngles())
+		RestOffsets[strKey] = angOffset
+		return angOffset
+	end
+
+	local function RestAlign(plyPlayer, strBone, angBone)
+		local angOffset = GAMEMODE:GetRestOffset(plyPlayer:GetModel(), strBone)
+		if not angOffset then return angBone end
+		local _, angAligned = LocalToWorld(vector_origin, angOffset, vector_origin, angBone)
+		return angAligned
+	end
+
+	local function MirrorLocal(vecPos, angAng)
+		local vecForward, vecUp = angAng:Forward(), angAng:Up()
+		vecForward.y = -vecForward.y
+		vecUp.y = -vecUp.y
+		return Vector(vecPos.x, -vecPos.y, vecPos.z), vecForward:AngleEx(vecUp)
+	end
+
+	local function PlaceMirrored(entTarget, tblModel, vecSlot, angSlot)
+		local Root = tblModel[1]
+		local angRoot = Root.Angle or angle_zero
+		local vecRoot = LocalToWorld(Root.Position or vector_origin, angle_zero, vector_origin, angRoot)
+		local tblPlace = {{entTarget, vecRoot, angRoot}}
+		for k, kid in pairs(entTarget.Children or {}) do
+			local Info = tblModel[k + 1]
+			if IsValid(kid) and Info then
+				local _, angKid = LocalToWorld(vector_origin, Info.Angle or angle_zero, vector_origin, angRoot)
+				local vecKid = LocalToWorld(Info.Position or vector_origin, angle_zero, vecRoot, angKid)
+				table.insert(tblPlace, {kid, vecKid, angKid})
+			end
+		end
+		for _, Place in ipairs(tblPlace) do
+			local vecLocal, angLocal = MirrorLocal(Place[2], Place[3])
+			local vecWorld, angWorld = LocalToWorld(vecLocal, angLocal, vecSlot, angSlot)
+			Place[1]:SetPos(vecWorld)
+			Place[1]:SetAngles(angWorld)
 		end
 	end
 
@@ -176,7 +254,9 @@ if CLIENT then
 		local tblAttachment = plyPlayer:GetAttachment(entTarget.UD_AttachmentID)
 		if tblAttachment then return tblAttachment.Pos, tblAttachment.Ang end
 		if entTarget.UD_BoneID then
-			return plyPlayer:GetBonePosition(entTarget.UD_BoneID)
+			local vecBone, angBone = plyPlayer:GetBonePosition(entTarget.UD_BoneID)
+			if entTarget.UD_RestAligned and angBone then angBone = RestAlign(plyPlayer, entTarget.Attachment, angBone) end
+			return vecBone, angBone
 		end
 	end
 
@@ -186,7 +266,15 @@ if CLIENT then
 		local tblAttachment = intAttachment and intAttachment > 0 and plyPlayer:GetAttachment(intAttachment)
 		if tblAttachment then return tblAttachment.Pos, tblAttachment.Ang end
 		local intBone = plyPlayer:LookupBone(strAttachment)
-		if intBone then return plyPlayer:GetBonePosition(intBone) end
+		if not intBone then return end
+		local vecBone, angBone = plyPlayer:GetBonePosition(intBone)
+		for _, tblSlot in pairs(self.DataBase.Slots) do
+			if tblSlot.RestAligned and angBone and (tblSlot.Attachment == strAttachment or tblSlot.MirrorAttachment == strAttachment) then
+				angBone = RestAlign(plyPlayer, strAttachment, angBone)
+				break
+			end
+		end
+		return vecBone, angBone
 	end
 
 	local LastPositionedFrame = -1
@@ -213,7 +301,9 @@ if CLIENT then
 					local tblModel = tblItemTable and istable(tblItemTable.Model) and tblItemTable.Model
 					local vecSlot, angSlot
 					if tblModel and tblModel[1] then vecSlot, angSlot = GetSlotTransform(plyPlayer, entTarget) end
-					if vecSlot then
+					if vecSlot and entTarget.UD_Mirror then
+						PlaceMirrored(entTarget, tblModel, vecSlot, angSlot)
+					elseif vecSlot then
 						local Root = tblModel[1]
 						local _, angRoot = LocalToWorld(vector_origin, Root.Angle or angle_zero, vector_origin, angSlot)
 						local vecRoot = LocalToWorld(Root.Position or vector_origin, angle_zero, vecSlot, angRoot)

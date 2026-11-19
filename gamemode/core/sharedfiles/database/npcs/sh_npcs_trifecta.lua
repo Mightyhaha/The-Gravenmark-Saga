@@ -230,6 +230,13 @@ Register.NPC(NPC)
 
 local NPC = MorvaineMelee("morvaine_marshal", "Lord-Marshal Edric Vane", 400, RedSide .. "generalrouge.mdl", {"weapon_melee_sword", "armor_shield_round"})
 NPC.Title = "Marshal of the Crossing"
+NPC.Boss = true
+NPC.Abilities = {
+	{Type = "guard", Interval = 16, Duration = 4, Reduction = 0.75, FirstDelay = 8, Line = "Vane locks his shield. Strike when it drops!"},
+	{Type = "slam", Interval = 13, Radius = 200, Range = 220, Windup = 1.3, Damage = 1.8},
+	{Type = "summon", Health = 0.5, NPC = {"morvaine_soldier", "morvaine_knight"}, Count = 2, Rise = false, Bound = false, LevelOffset = -2, Sound = "ambient/alarms/warningbell1.wav", Line = "Vane sounds the bell. Reinforcements!"},
+	{Type = "enrage", Health = 0.25, Damage = 1.4},
+}
 NPC = AddDrop(NPC, "money", 100, 250, 400)
 NPC = AddDrop(NPC, "dm_marshal_seal", 100)
 NPC = AddDrop(NPC, "weapon_melee_iron_longsword", 15)
@@ -253,10 +260,27 @@ Register.NPC(NPC)
 
 local NPC = GallowsMelee("bandit_jory", "Black Jory", 300, "mercveteran.mdl", "npc_short_sword_shield")
 NPC.Title = "Chief of the Deserters"
+NPC.Boss = true
+NPC.Abilities = {{Type = "enrage", Health = 0.4, Damage = 1.4, Line = "Black Jory snarls and swings wildly!"}}
 NPC = AddDrop(NPC, "money", 100, 60, 90)
 NPC = AddDrop(NPC, "armor_shield_buckler", 25)
 NPC = AddDrop(NPC, "weapon_melee_sword", 20)
 NPC = AddMultiplier(NPC, 45, 3)
+Register.NPC(NPC)
+
+local NPC = GallowsMelee("bandit_redhal", "Red Hal", 350, "mercfootman.mdl", "npc_medieval_axe")
+NPC.Title = "Hill-Captain of the Gallows Company"
+NPC.Boss = true
+NPC.Abilities = {
+	{Type = "warcry", Interval = 22, Radius = 700, Damage = 1.3, Duration = 10, Line = "Red Hal bellows for the Company!"},
+	{Type = "enrage", Health = 0.35, Damage = 1.4},
+}
+NPC.EliteLoot = {}
+NPC = AddDrop(NPC, "money", 100, 200, 350)
+NPC = AddDrop(NPC, "dm_company_toll", 100, 2, 3)
+NPC = AddDrop(NPC, "dm_ashbeads", 100, 1, 2)
+NPC = AddDrop(NPC, "weapon_melee_waraxe", 15)
+NPC = AddMultiplier(NPC, 60, 5)
 Register.NPC(NPC)
 
 local NPC = GallowsMelee("bandit_sellsword", "Gallows Company Sellsword", 500, "mercarbalest.mdl", "npc_long_sword")
@@ -297,6 +321,12 @@ Register.NPC(NPC)
 
 local NPC = GallowsMelee("bandit_raubritter", "Sir Gaspard Thorne", 400, "raubritter.mdl", "npc_silver_sword_shield")
 NPC.Title = "The Robber Knight"
+NPC.Boss = true
+NPC.Abilities = {
+	{Type = "slam", Interval = 11, Radius = 170, Range = 200, Windup = 1.1, Damage = 1.7},
+	{Type = "warcry", Health = 0.6, Radius = 800, Damage = 1.35, Duration = 12, Line = "Thorne roars: \"To me, you dogs!\""},
+	{Type = "enrage", Health = 0.3, Damage = 1.5, Line = "Sir Gaspard Thorne will not yield!"},
+}
 NPC.EliteLoot = {Epic = {"unique_thornes_oath"}}
 NPC = AddDrop(NPC, "money", 100, 300, 500)
 NPC = AddDrop(NPC, "weapon_melee_longsword", 12)
