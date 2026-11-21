@@ -53,8 +53,9 @@ end
 
 function ENT:ReturnSpawn()
 	self:Idle()
-	if self.Position then
-		self:SetLastPosition( self.Position )
+	local vecHome = self.UD_LeashAnchor or self.Position
+	if vecHome then
+		self:SetLastPosition( vecHome )
 		self:SetSchedule( SCHED_FORCED_GO )
 	end
 end

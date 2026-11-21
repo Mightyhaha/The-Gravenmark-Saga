@@ -189,13 +189,14 @@ The Medieval NPC Melee Weapons addon also gives NPC weapons that show their own 
 
 `sh_world.lua`, placed with the map editor's **Patrol routes** mode.
 
-- **Patrol routes** are lines of points. NPCs from a spawn point with that route's number walk it in a loop (two points walk back and forth; three or more go round and back to the first). They break off to fight and pick the route up again afterwards, starting from the nearest point. A one-point route sends them to that spot and keeps them there.
-- **Day or night spawns:** a spawn point can spawn **Always**, **Only at night** or **Only by day**. Out of their time, NPCs that aren't fighting vanish in a puff of dust and come back when their time returns. Use night-only spawn points for rare night creatures.
-- **Night monsters:** tick **A night monster may roam this route** on a route and set the monster's level. Each nightfall there is a 60% chance (`GM.NightRoamerChance`) that, 20 to 90 seconds later, one of the night monsters (`GM.NightRoamers`) appears at the start of a random ticked route and walks it. Everyone gets an announcement, naming the place if the route has a name. If it's still alive at dawn and not fighting, it fades away. Whoever kills it is announced to everyone. Only one walks at a time.
+- **Patrol routes** are chains of nodes (up to 250). NPCs from a spawn point with that route's number start at the nearest node and walk the chain, either as a **loop** (after the last node, back to the first) or **back and forth** (to the end, then turn around). A route can make them wait a number of seconds at each node, and walk or run. They break off to fight, and the leash then pulls them back to where they left the route, not to their spawn point, so routes can be as long as you like. An NPC that hasn't moved for 8 seconds skips to the next node. A one-node route sends them to that spot and keeps them there.
+- **Day or night spawns:** a spawn point can spawn **Always**, **Only at night** or **Only by day**. Out of their time, NPCs vanish in a puff of dust within a few seconds and come back when their time returns. One that is fighting someone within 1500 units gets 20 more seconds (`GM.OutOfTimeGrace`), then vanishes anyway. Use night-only spawn points for rare night creatures.
+- **Night monsters:** tick **A night monster may roam this route** on a route, pick which monster from the dropdown (or leave it on **any**) and set the monster's level. Each nightfall there is a 60% chance (`GM.NightRoamerChance`) that, 20 to 90 seconds later, one of the night monsters (`GM.NightRoamers`) appears at the first node of a random ticked route and walks it from there. Everyone gets an announcement, naming the place if the route has a name. If it's still alive at dawn and not fighting, it fades away. Whoever kills it is announced to everyone. Only one walks at a time.
 - The night monsters (`sh_npcs_roamers.lua`) are bosses with elite loot (two rolls, and a good chance of a gem):
   - **The Gravewight**, "Walker of the Night Roads": a skeleton with an iron longsword. It raises Risen Bones as it walks, slams the ground and goes into a rage at 30%.
   - **The Pale Knight**, "Who Rides After Midnight": a see-through ghostly knight with a silver longsword and a guard shield. It steps behind its target, slams, turns half-ethereal at half health (takes 80% less damage for 5 seconds) and rages at 25%.
-- `UD_Dev_SummonRoamer [route] [npc]` spawns one straight away, for example `UD_Dev_SummonRoamer 3 roamer_paleknight`.
+  - **The Night Beast**, "That Which Hunts the Dark": an antlion guard tinted almost black (`roamer_nightbeast`). It charges and shoves like any antlion guard, pounds the ground in a wide circle every 13 seconds and rages at 30%. It is its own race, so it also fights bandits, soldiers and the dead it meets.
+- `UD_Dev_SummonRoamer [route] [npc]` spawns one straight away, for example `UD_Dev_SummonRoamer 3 roamer_paleknight` or just `UD_Dev_SummonRoamer roamer_nightbeast` (any ticked route). It works by day too: a summoned one doesn't fade at dawn, and stays until it is killed or another is summoned. The console prints where it spawned.
 
 ### Melee AI
 
@@ -224,7 +225,7 @@ Hostile humans and skeletons are `npc_citizen`, whose own AI hangs back, strafes
 | Lord-Marshal Vane (70) | Raises his guard every 16 seconds, slam, rings a bell for two soldiers or knights at 50%, rages at 25% |
 | Barrow Lord (92 to 100) | Slam, rages at 35% |
 | The Necromancer (125) | Raises skeletons every 12 seconds, blinks away when you close in, tears open the graves for three more at 50%, rages at 20% |
-| The Gravewight, The Pale Knight | See Night monsters |
+| The Gravewight, The Pale Knight, The Night Beast | See Night monsters |
 
 ### Medieval weapons
 
@@ -554,6 +555,7 @@ Using a prop whose model is listed in `GM.SearchableProps` (`gamemode/init.lua`)
 | --- | --- |
 | `UD_Dev_EditMap` | Opens or closes the map editor for NPC spawn points, props, player spawns, ore veins and patrol routes. Layouts are saved per map to `data/underdone/Maps/<map>.txt`. |
 | `UD_Dev_SetTime <hour>` | Sets the time of day, 0 to 24. Without a number it prints the time. |
+| `UD_Dev_NightCheck` | Lists every NPC with a day or night spawn time in the console: whether it is allowed out now, whether it counts as fighting, its enemy and how long until it is forced out. |
 | `UD_Dev_SummonRoamer [route] [npc]` | Spawns a night monster on a ticked route, or on the route number given. |
 | `UD_Dev_GiveGems <grade>` | Gives one gem of each kind, grade 1 to 8. |
 | `UD_ResetCharacter confirm` | Wipes your character (level, items, bank, skills, quests, trades) and starts a new one. Your old save is copied to `data/underdone/backups/` first. In single player the map restarts; on a server you are kicked and start fresh when you rejoin. Anyone can use it on themselves. |
@@ -574,7 +576,11 @@ Using the map editor:
 - **Ore veins** mode places mineable rocks: pick the ore, the stone model and the respawn time, then Add. Click a vein's marker to change, move or remove it.
 - **Player spawns** mode places where players appear, facing the arrow's direction. Players spawn at a random one that nobody is standing on; with none placed, the map's own spawn is used.
 - Spawn points also take a **Patrol route #** (0 keeps them where they spawn) and when they spawn: **Always**, **Only at night** or **Only by day**. The marker label shows both.
-- **Patrol routes** mode: click the ground and press **Start a new route here**, then keep clicking to add points; the route is drawn as a loop of orange lines (purple if a night monster may roam it). Click a point of another route to switch to it. Give it a place name (used in night monster announcements), tick **A night monster may roam this route** and set the monster's level, then **Apply changes**. **Remove last point** undoes a click. Routes are also drawn in NPC spawn point mode, so you can see which number to give a spawn point.
+- **Patrol routes** mode: click the ground and press **Start a new route here**, then keep clicking to add nodes. The route is drawn in orange (purple if a night monster may roam it) with arrows showing the walking direction; the selected route shows a number on every node, and the selected node has a white ring.
+  - Click a node to select it. Clicking the ground adds a new node **after the selected node**, so you can insert nodes in the middle of a route; **Select last node** goes back to adding at the end.
+  - **Move selected node** then a click moves it; **Delete selected node** removes it.
+  - Pick **Loop** or **Back and forth**, the wait at each node and whether they run, give it a place name (used in night monster announcements), tick **A night monster may roam this route**, pick the monster and set its level. Route settings take effect as soon as you change them; press **Save map** to keep them.
+  - Click a node of another route to switch to it. Routes are also drawn in NPC spawn point mode, with a purple line from each spawn point to the nearest node of its route.
 - Press **Save map** when you are done; the window shows when there are unsaved changes.
 
 ## Client options

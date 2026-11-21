@@ -9,7 +9,12 @@ local function UpdateNPCLeash()
 		if not NPCTable or not NPCTable.DistanceRetreat then continue end
 
 		local Leash = NPCTable.DistanceRetreat
-		local DistSqr = npc:GetPos():DistToSqr(npc.Position)
+		local Home = npc.Position
+		if npc.UD_Patrolling then
+			if not npc.HasTask and not IsValid(npc:GetEnemy()) then npc.UD_LeashAnchor = npc:GetPos() end
+			Home = npc.UD_LeashAnchor or npc.Position
+		end
+		local DistSqr = npc:GetPos():DistToSqr(Home)
 
 		if DistSqr > Leash ^ 2 and not npc.HasTask then
 			npc:ReturnSpawn()
@@ -22,7 +27,7 @@ local function UpdateNPCLeash()
 			end)
 		end
 		if DistSqr > (Leash * 2) ^ 2 then
-			npc:SetPos(npc.Position)
+			npc:SetPos(Home)
 			DistSqr = 0
 		end
 		if npc.HasTask then
@@ -31,7 +36,7 @@ local function UpdateNPCLeash()
 				npc.HasTask = false
 			end
 			if npc:IsBlocked() then
-				npc:SetPos(npc.Position)
+				npc:SetPos(Home)
 				npc.HasTask = false
 			end
 		end

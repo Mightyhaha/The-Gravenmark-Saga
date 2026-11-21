@@ -36,6 +36,7 @@ function GM:SummonForNPC(entNPC, tblSummon)
 			if IsValid(entRaised) then
 				entRaised.UD_Summoned = true
 				entRaised.UD_Unbound = tblSummon.Bound == false
+				entRaised.UD_SpawnWhen = entNPC.UD_SpawnWhen
 				entRaised.UD_SummonMaster = entNPC
 				table.insert(entNPC.UD_Summons, entRaised)
 				if IsValid(entEnemy) then

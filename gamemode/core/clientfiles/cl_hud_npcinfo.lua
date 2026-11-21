@@ -45,8 +45,8 @@ local NpcHealthBar = nil
 
 local function DrawNPCHealthBar(NPC, NPCPos)
 	local BarColor = Green
-	local Health = math.Clamp(NPC:GetNWInt("Health", NPC:Health()), 0, 9999)
-	local MaxHealth = NPC:GetNWInt("MaxHealth")
+	local MaxHealth = math.max(NPC:GetNWInt("MaxHealth"), 1)
+	local Health = math.Clamp(NPC:GetNWInt("Health", NPC:Health()), 0, MaxHealth)
 	if Health <= (MaxHealth * 0.2) then BarColor = Red end
 
 	NpcHealthBar = NpcHealthBar or jdraw.NewProgressBar()

@@ -149,34 +149,65 @@ if SERVER then
 		local ply = EditorPlayer()
 		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
 		if not ply or not Route then return end
-		SendNetworkMessage("UD_UpdatePatrolRoute", ply, {intKey, {Name = Route.Name, Points = Route.Points, Roamer = Route.Roamer, Level = Route.Level}})
+		SendNetworkMessage("UD_UpdatePatrolRoute", ply, {intKey, {Name = Route.Name, Points = Route.Points, Roamer = Route.Roamer, Level = Route.Level, Mode = Route.Mode, Wait = Route.Wait, Run = Route.Run, Monster = Route.Monster}})
 	end
 
-	function GM:CreatePatrolRoute(vecFirst, strName, tblPoints, boolRoamer, intLevel)
-		table.insert(GAMEMODE.MapEntities.PatrolRoutes, {Name = strName or "", Points = tblPoints or {vecFirst}, Roamer = boolRoamer and true or false, Level = intLevel or 30})
+	GM.PatrolModes = {loop = true, pingpong = true}
+	GM.MaxPatrolPoints = 250
+
+	function GM:CreatePatrolRoute(vecFirst, strName, tblPoints, boolRoamer, intLevel, strMode, intWait, boolRun, strMonster)
+		table.insert(GAMEMODE.MapEntities.PatrolRoutes, {
+			Name = strName or "",
+			Points = tblPoints or {vecFirst},
+			Roamer = boolRoamer and true or false,
+			Level = intLevel or 30,
+			Mode = GAMEMODE.PatrolModes[strMode or ""] and strMode or "loop",
+			Wait = math.Clamp(tonumber(intWait) or 0, 0, 60),
+			Run = boolRun and true or false,
+			Monster = GAMEMODE:IsNightRoamer(strMonster) and strMonster or "",
+		})
 		SendPatrolRoute(#GAMEMODE.MapEntities.PatrolRoutes)
 	end
 
-	function GM:UpdatePatrolRoute(intKey, strName, boolRoamer, intLevel)
+	function GM:UpdatePatrolRoute(intKey, strName, boolRoamer, intLevel, strMode, intWait, boolRun, strMonster)
 		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
 		if not Route then return end
 		if strName then Route.Name = string.sub(strName, 1, 60) end
 		if boolRoamer ~= nil then Route.Roamer = boolRoamer end
 		Route.Level = intLevel or Route.Level
+		if GAMEMODE.PatrolModes[strMode or ""] then Route.Mode = strMode end
+		if intWait then Route.Wait = math.Clamp(intWait, 0, 60) end
+		if boolRun ~= nil then Route.Run = boolRun end
+		if strMonster then Route.Monster = GAMEMODE:IsNightRoamer(strMonster) and strMonster or "" end
 		SendPatrolRoute(intKey)
 	end
 
-	function GM:AddPatrolPoint(intKey, vecPosition)
+	function GM:AddPatrolPoint(intKey, vecPosition, intAfter)
 		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
-		if not Route or #Route.Points >= 40 then return end
-		table.insert(Route.Points, vecPosition)
+		if not Route or #Route.Points >= GAMEMODE.MaxPatrolPoints then return end
+		if intAfter and intAfter >= 1 and intAfter < #Route.Points then
+			table.insert(Route.Points, intAfter + 1, vecPosition)
+		else
+			table.insert(Route.Points, vecPosition)
+		end
 		SendPatrolRoute(intKey)
 	end
 
-	function GM:RemoveLastPatrolPoint(intKey)
+	function GM:MovePatrolPoint(intKey, intIndex, vecPosition)
+		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
+		if not Route or not intIndex or not Route.Points[intIndex] then return end
+		Route.Points[intIndex] = vecPosition
+		SendPatrolRoute(intKey)
+	end
+
+	function GM:RemovePatrolPoint(intKey, intIndex)
 		local Route = GAMEMODE.MapEntities.PatrolRoutes[intKey]
 		if not Route or #Route.Points <= 1 then return end
-		table.remove(Route.Points)
+		if intIndex and Route.Points[intIndex] then
+			table.remove(Route.Points, intIndex)
+		else
+			table.remove(Route.Points)
+		end
 		SendPatrolRoute(intKey)
 	end
 
@@ -337,7 +368,7 @@ if SERVER then
 		end
 		for _, Route in ipairs(tblDecodedTable.PatrolRoutes or {}) do
 			if istable(Route.Points) and #Route.Points > 0 then
-				GAMEMODE:CreatePatrolRoute(nil, Route.Name, Route.Points, Route.Roamer, Route.Level)
+				GAMEMODE:CreatePatrolRoute(nil, Route.Name, Route.Points, Route.Roamer, Route.Level, Route.Mode, Route.Wait, Route.Run, Route.Monster)
 			end
 		end
 	end
@@ -347,7 +378,7 @@ if SERVER then
 		local strFileName = GAMEMODE.DataFolder .. "/Maps/" .. game.GetMap() .. ".txt"
 		local tblSaveTable = {NPCSpawnPoints = {}, WorldProps = {}, PlayerSpawns = {}, OreVeins = {}, PatrolRoutes = {}}
 		for _, Route in ipairs(GAMEMODE.MapEntities.PatrolRoutes) do
-			table.insert(tblSaveTable.PatrolRoutes, {Name = Route.Name, Points = Route.Points, Roamer = Route.Roamer, Level = Route.Level})
+			table.insert(tblSaveTable.PatrolRoutes, {Name = Route.Name, Points = Route.Points, Roamer = Route.Roamer, Level = Route.Level, Mode = Route.Mode, Wait = Route.Wait, Run = Route.Run, Monster = Route.Monster})
 		end
 		for _, Vein in ipairs(GAMEMODE.MapEntities.OreVeins) do
 			table.insert(tblSaveTable.OreVeins, {Position = Vein.Position, Angle = Vein.Angle, Ore = Vein.Ore, SpawnTime = Vein.SpawnTime, Model = Vein.Model})
@@ -657,17 +688,24 @@ if SERVER then
 			if not IsEditor(ply) then return end
 			local Position = VectorFromArgs(args, 2)
 			if not Position then return end
-			GAMEMODE:AddPatrolPoint(tonumber(args[1]), Position + Vector(0, 0, 8))
+			GAMEMODE:AddPatrolPoint(tonumber(args[1]), Position + Vector(0, 0, 8), tonumber(args[5]))
+		end)
+
+		concommand.Add("UD_Dev_EditMap_MoveRoutePoint", function(ply, command, args)
+			if not IsEditor(ply) then return end
+			local Position = VectorFromArgs(args, 3)
+			if not Position then return end
+			GAMEMODE:MovePatrolPoint(tonumber(args[1]), tonumber(args[2]), Position + Vector(0, 0, 8))
 		end)
 
 		concommand.Add("UD_Dev_EditMap_RemoveRoutePoint", function(ply, command, args)
 			if not IsEditor(ply) then return end
-			GAMEMODE:RemoveLastPatrolPoint(tonumber(args[1]))
+			GAMEMODE:RemovePatrolPoint(tonumber(args[1]), tonumber(args[2]))
 		end)
 
 		concommand.Add("UD_Dev_EditMap_UpdateRoute", function(ply, command, args)
 			if not IsEditor(ply) then return end
-			GAMEMODE:UpdatePatrolRoute(tonumber(args[1]), args[2] or "", args[3] == "1", ClampArg(args[4], 1, 150, 30))
+			GAMEMODE:UpdatePatrolRoute(tonumber(args[1]), (args[2] == "_" or not args[2]) and "" or args[2], args[3] == "1", ClampArg(args[4], 1, 150, 30), args[5], ClampArg(args[6], 0, 60, 0), args[7] == "1", args[8] or "")
 		end)
 
 		concommand.Add("UD_Dev_EditMap_RemoveRoute", function(ply, command, args)

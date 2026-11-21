@@ -45,3 +45,20 @@ NPC.Abilities = {
 	{Type = "enrage", Health = 0.25, Damage = 1.5},
 }
 Register.NPC(NPC)
+
+local NPC = Roamer("roamer_nightbeast", "The Night Beast", "That Which Hunts the Dark", nil, nil, 110, 12)
+NPC.SpawnName = "npc_antlionguard"
+NPC.Race = "beast"
+NPC.Weapon = nil
+NPC.KeyValues = {allowbark = 0, cavernbreed = 0, incavern = 0}
+NPC.Mute = false
+NPC.DistanceRetreat = 450
+NPC.Color = {38, 34, 48, 255}
+NPC.DeathSound = {"npc/antlion_guard/antlion_guard_die1.wav", "npc/antlion_guard/antlion_guard_die2.wav"}
+NPC.RoamerLine = "Something huge crashes through the trees. The Night Beast hunts tonight"
+NPC.RoamerSound = "npc/antlion_guard/angry1.wav"
+NPC.Abilities = {
+	{Type = "slam", Interval = 13, Radius = 230, Range = 260, Windup = 1.4, Damage = 2.2, Sound = "npc/antlion_guard/angry2.wav"},
+	{Type = "enrage", Health = 0.3, Damage = 1.6, Sound = "npc/antlion_guard/angry3.wav", Line = "The Night Beast roars and tears at the ground!"},
+}
+Register.NPC(NPC)
